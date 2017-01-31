@@ -96,11 +96,11 @@ int main(int argc, char *argv[]) {
 
   printf("\t\t***** Constructing root tree *****\n\n");
 
-  //root = build_tr(TREE_SIZE, CYCLES);
+  root = build_tr(TREE_SIZE, CYCLES);
   
-  root = cons(NULL, NULL);
+  //root = cons(NULL, NULL);
   //set_cdr(root, root);
-  set_car(root, root);
+  //set_car(root, root);
 
 /*      root
     |------------| 
@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
      \             /
       -------------     */
 
-  //PRINT_TREES ? traverse_tr(root, REG) : traverse_tr(root, INTACT_CHECK);
+  PRINT_TREES ? traverse_tr(root, REG) : traverse_tr(root, INTACT_CHECK);
 
   if(PRINT_ADDRS) {
     printf("\ntree addrs:\n");
