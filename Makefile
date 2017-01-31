@@ -1,24 +1,20 @@
 # compiler to use
 CC = gcc
 # flags to compiler
-CFLAGS = -g -Wall -O3
+CFLAGS = -Wall -g -O3
 # include
 INCLUDES = -I/include/ -Iinclude/
-# lib
-#LFLAGS = -L/lib/
-# link libs
-#LIBS = -lm
 # source files
 SRCS = src/bits.c src/cheney.c src/trees.c src/test.c
 # auto-generate the object files
 OBJS = $(SRCS:.c=.o)
 # define the executable file
-MAIN = cheney_test
+MAIN = cheney
 
 all:    $(MAIN)
 
 $(MAIN): $(OBJS) 
-	        $(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
+	        $(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS)
 
 .c.o:
 	        $(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@

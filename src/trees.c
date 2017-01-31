@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  1/25/17
+ Edited:  1/28/17
 */
 
 /**********************************************************************
@@ -26,8 +26,7 @@
       G L O B A L S
 
 ***********************************************************************/
-int LEAF_COUNT;
-int CYCLES;
+int LEAF_COUNT, CYCLES;
 
 cell_t *ANCESTOR;
 
@@ -85,52 +84,46 @@ cell_t *build_tr(int cells, int cycles) {
   return root;                            // return tr
 }
 
-void print_tr_help(void *tr) {                                                  // *** NOTE:: still need to do cycle detection to print properly
+void print_tr_help(void *tr) {
   if(tr == NULL) { printf("()"); }
-  else if(isAtomic(&tr)) {
-    clrBit((void **)&tr, 0);
+  else if(!isPtr(&tr) && !isAtomic(&tr)) { printf("ERR: %p\n", tr); }
+  else {
     switch(TREE_WALK) {
-    case PRINT_REG:
-      printf("%d", *(int *)tr);
-      break;
-    case PRINT_ADDRS:
-      printf("\t\tleaf %d: %p\n", *(int *)tr, tr);
-      break;
-    case INTACT_CHECK:
-      break;
-    default:
-      fprintf(stderr, "ERROR: unknown traversal type\nexiting...\n");
-      exit(EXIT_FAILURE);
-      break;
+      case REG:
+        if(isAtomic(&tr)) { 
+          clrBit((void **)&tr, 0);
+          printf("%d", *(int *)tr); 
+        } else {
+          printf("(");
+          print_tr_help(((cell_t *)tr)->car);
+          printf(" . ");
+          print_tr_help(((cell_t *)tr)->cdr);
+          printf(")");
+        }
+        break;
+      case ADDRS:
+        if(isAtomic(&tr)) { 
+          clrBit((void **)&tr, 0);
+          printf("\t\tleaf %d: %p\n", *(int *)tr, tr);
+          break;
+        }
+        printf("cell: %p\n", tr); // fallthrough
+      case INTACT_CHECK:
+        if(isPtr(&tr)) {
+          print_tr_help(((cell_t *)tr)->car);
+          print_tr_help(((cell_t *)tr)->cdr);
+        }
+        break;
     }
-  }
-  else if(isPtr(&tr)) {
-    switch(TREE_WALK) {
-    case PRINT_REG:     
-      printf("(");
-      print_tr_help(((cell_t *)tr)->car);
-      printf(" . ");
-      print_tr_help(((cell_t *)tr)->cdr);
-      printf(")");
-      break;
-    case PRINT_ADDRS:
-      printf("cell: %p\n", tr); // fallthrough
-    case INTACT_CHECK:  
-      print_tr_help(((cell_t *)tr)->car);
-      print_tr_help(((cell_t *)tr)->cdr);
-      break;
-    default:
-      fprintf(stderr, "ERROR: unknown traversal type\nexiting...\n");
-      exit(EXIT_FAILURE);
-      break;
-    }
-
-  }
-  else { printf("ERR: %p\n", tr); }
+  } 
 }
 
-void traverse_tr(void *tr, traversal_t walk_type) {
-  TREE_WALK = walk_type;
+void traverse_tr(void *tr, traversal_t walk_t) {
+  if(walk_t != REG && walk_t != ADDRS && walk_t != INTACT_CHECK) {
+    fprintf(stderr, "ERROR: unknown traversal type\nexiting...\n");
+    exit(EXIT_FAILURE);
+  }
+  TREE_WALK = walk_t;
   print_tr_help((void *)tr);
   printf("\n");
 }

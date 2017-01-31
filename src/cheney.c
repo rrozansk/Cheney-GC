@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/14/17
- Edited:  1/25/17
+ Edited:  1/30/17
 */
 
 /**********************************************************************
@@ -23,14 +23,10 @@
     G L O B A L S
 
 ***********************************************************************/
-cell_t *fromSpace, *toSpace;
-cell_t *scanPtr, *freePtr;
+cell_t *from, *to;
+cell_t *scan, *alloc;
 
-int semiSize;
-
-#if DEBUG 
-int copy_alloc;
-#endif
+unsigned long half;
 
 /**********************************************************************
 
@@ -57,54 +53,51 @@ void set_car(cell_t *cell, void *v) { cell->car = v;  }
 void set_cdr(cell_t *cell, void *v) { cell->cdr = v;  }
 
 cell_t *halloc() {
-  if(freePtr == fromSpace+semiSize) { collect((void **)&root); }
-  return freePtr++;
+  if(alloc == from + half) { 
+    collect();
+    if(alloc >= from + half) {
+      fprintf(stderr, "failure: insufficient memory, exiting...\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+  return alloc++;
 }
 
-void hinit(unsigned int cells) {
-  fromSpace = calloc(cells + (cells % 2), sizeof(cell_t));
-  if(fromSpace == NULL) {
-    fprintf(stderr, "allocation of heap unsuccesful, exiting...\n");
+void hinit(unsigned long cells) {
+  from = calloc(cells + (cells % 2), sizeof(cell_t));
+  if(from == NULL) {
+    fprintf(stderr, "failure: allocation of heap unsuccessful, exiting...\n");
     exit(EXIT_FAILURE);
   }
-  freePtr = fromSpace;
-  semiSize = cells / 2;
-  toSpace = fromSpace + semiSize;
+  alloc = from;
+  half = cells / 2;
+  to = from + half;
 }
 
 void copy_ref(void **p) {
-  if(!isPtr(p)) { return; }
-  cell_t *obj = *p;
-  if(fromSpace <= obj && obj < fromSpace+semiSize) { 
-    *(cell_t **)p = obj; 
-  } else {
-    #if DEBUG 
-    copy_alloc++;
-    #endif
-    cell_t *cell = freePtr++;
-    set_car(cell, ((cell_t *)obj)->car);
-    set_cdr(cell, ((cell_t *)obj)->cdr);
-    *(cell_t **)p = cell;
+  if(isAtomic(p)) { return; }            // only copy/update cell refs
+  cell_t *obj = *p;                      // get the cells addr
+  cell_t *fwd = obj->car;                // get the cells fwd addr
+  if(from <= fwd && fwd < from + half) { // check if obj was already copied
+    *(void **)p = fwd;                   // install fwd ref
+  } else {                               // **else**
+    cell_t *cell = alloc++;              // get a new cell
+    set_car(cell, obj->car);             // copy old car ref
+    set_cdr(cell, obj->cdr);             // copy old cdr ref
+    set_car(obj, cell);                  // place fwd addr at old cells loc
+    *(void **)p = cell;                  // install new ref
   }
 }
 
-void collect(void **r) {
-  cell_t *tmp = fromSpace;
-  fromSpace = toSpace;
-  freePtr = fromSpace;
-  scanPtr = freePtr;
-  toSpace = tmp;
-  #if DEBUG 
-  copy_alloc = 0;
-  #endif
+void collect() {
+  cell_t *tmp = from;                    // swap semi spaces
+  scan = alloc = from = to;              // also set scan and alloc ptrs
+  to = tmp;
 
-  copy_ref(r);
-  while(scanPtr != freePtr) {
-    copy_ref(&(scanPtr->car));
-    copy_ref(&(scanPtr->cdr));
-    scanPtr++;
+  copy_ref(&root);                       // copy the root
+  for(; scan != alloc; scan++) {         // scan until the allocating stops
+    copy_ref(&(scan->car));              // update car ref
+    copy_ref(&(scan->cdr));              // update cdr ref
   }
-  #if DEBUG 
-  printf("collection copied %d refs\n", copy_alloc);
-  #endif
+  printf("collection copied %d refs\n", abs(from-alloc));
 }

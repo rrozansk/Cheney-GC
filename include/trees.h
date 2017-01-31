@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  1/25/17
+ Edited:  1/28/17
 */
 
 #ifndef TREES_STRUCT_DEFS
@@ -17,7 +17,7 @@
     E N U M E R A T I O N S
 
 ***********************************************************************/
-typedef enum { PRINT_REG, PRINT_ADDRS, INTACT_CHECK } traversal_t;
+typedef enum { REG, ADDRS, INTACT_CHECK } traversal_t;
 
 /**********************************************************************
 
