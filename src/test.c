@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  1/29/17
+ Edited:  1/31/17
 */
 
 /**********************************************************************
@@ -62,11 +62,6 @@ int main(int argc, char *argv[]) {
     return 0;
   } 
 
-  if(TREE_SIZE > HEAP_CELLS / 2) {
-    printf("TREE_SIZE must be < HEAP_CELLS / 2\n");
-    return 0;
-  }
-
   if(TREE_SIZE < 1) {
     printf("TREE_SIZE must be > 0\n");
     return 0;
@@ -95,19 +90,8 @@ int main(int argc, char *argv[]) {
   hinit(HEAP_CELLS);
 
   printf("\t\t***** Constructing root tree *****\n\n");
-
-  root = build_tr(TREE_SIZE, CYCLES);
-  
-  //root = cons(NULL, NULL);
-  //set_cdr(root, root);
-  //set_car(root, root);
-
-/*      root
-    |------------| 
-    |  ()  |     |->|
-    |------------|  |
-     \             /
-      -------------     */
+ 
+  build_tr(&root, TREE_SIZE, CYCLES);
 
   PRINT_TREES ? traverse_tr(root, REG) : traverse_tr(root, INTACT_CHECK);
 

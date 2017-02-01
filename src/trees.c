@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  1/28/17
+ Edited:  1/31/17
 */
 
 /**********************************************************************
@@ -26,9 +26,7 @@
       G L O B A L S
 
 ***********************************************************************/
-int LEAF_COUNT, CYCLES;
-
-cell_t *ANCESTOR;
+int leaf_c;
 
 traversal_t TREE_WALK;
 
@@ -37,51 +35,49 @@ traversal_t TREE_WALK;
       F U N C T I O N S
 
 ***********************************************************************/
-void *encodeInt() {
+void *encodeLeaf() {
   void *i = malloc(sizeof(int));
-  *(int *)i = LEAF_COUNT++;
+  *(int *)i = leaf_c++;
   setBit((void **)&i, 0);
   return i;
 }
-
+ 
 // generate a tr using cells from the heap. 
 // CYCLES = 0 :: tr is perfectly balanced and has #leafs = #cells+1
 // CYCLES = 1 :: tr randomly holds an ancestral ref and randomly assigns it
-void build_tr_help(cell_t *cell, int cells_left) {                                                 // *** NOTE:: still need to do cycle creation in tr generation
-  cell_t *last_cell;
-  switch(cells_left) {
-  case 0:  // no cells left to allocate, so populate the leafs
-    set_car(cell, encodeInt());
-    set_cdr(cell, encodeInt());
-    break;
-  case 1: // random build left or right and populate leaf
-    last_cell = cons(NULL, NULL);
-    build_tr_help(last_cell, 0);
-    (rand() % 2) ? set_car(cell, last_cell) : set_cdr(cell, last_cell);
+void build_tr_help(cell_t *root, int cells, int cycles, void *ancestor) {
+  if(!cells) { 
+    set_car(root, encodeLeaf());
+    set_cdr(root, encodeLeaf());
+  }
+  else if(cells == 1 && rand() % 2) {
+      set_car(root, cons(NULL, NULL));
+      build_tr_help(car(root), 0, cycles, ancestor);
+      set_cdr(root, encodeLeaf());
+  }
+  else if(cells == 1) {
+      set_cdr(root, cons(NULL, NULL));
+      build_tr_help(cdr(root), 0, cycles, ancestor);
+      set_car(root, encodeLeaf());
+  }
+  else {
+    set_car(root, cons(NULL, NULL));
+    set_cdr(root, cons(NULL, NULL));
 
-    (car(cell) == last_cell) ? set_cdr(cell, encodeInt()) : set_car(cell, encodeInt());
-    break;
-  default:
-    set_car(cell, cons(NULL, NULL));
-    set_cdr(cell, cons(NULL, NULL));
-    cells_left -= 2;
-    int left = cells_left / 2;
-    int right = cells_left - left;
+    cells -= 2;
+    int left = cells / 2;
+    int right = cells - left;
 
-    build_tr_help((cell_t *)car(cell), left);
-    build_tr_help((cell_t *)cdr(cell), right);
-    break;
+    build_tr_help(car(root), left, cycles, ancestor);
+    build_tr_help(cdr(root), right, cycles, ancestor);
   }
 }
 
-cell_t *build_tr(int cells, int cycles) {
-  srand(time(NULL));                      // seed random for tr builder
-  cell_t *root = cons(NULL, NULL);        // halloc the root
-  CYCLES = cycles;                        // generate cycles or not
-  ANCESTOR = root;                        // set ancestor for cycles
-  LEAF_COUNT = 0;                         // reset leaf counter
-  build_tr_help(root, cells-1);           // generate a tr
-  return root;                            // return tr
+void build_tr(void **root, int cells, int cycles) {
+  leaf_c = 0;                                // reset leaf counter
+  srand(time(NULL));
+  *(void **)root = cons(NULL, NULL);
+  build_tr_help(*root, --cells, cycles, root); // generate a tr
 }
 
 void print_tr_help(void *tr) {
