@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  1/31/17
+ Edited:  2/1/17
 */
 
 /**********************************************************************
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
   int HEAP_CELLS = 10;
   int TREE_SIZE = 5;
   int CYCLES = 0;
-  int PRINT_TREES = 1;
+  int PRINT_TREE = 1;
   int PRINT_ADDRS = 0;
 
   printf("\t\t*****COMMAND LINE ARGS*****\n\n");
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     HEAP_CELLS = atoi(argv[1]);
     TREE_SIZE = atoi(argv[2]);
     CYCLES = atoi(argv[3]);
-    PRINT_TREES = atoi(argv[4]);
+    PRINT_TREE = atoi(argv[4]);
     PRINT_ADDRS = atoi(argv[5]);
   }
 
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  if(PRINT_TREES != 0 && PRINT_TREES != 1) {
+  if(PRINT_TREE != 0 && PRINT_TREE != 1) {
     printf("PRINT_TREES must be 0: NO or 1: YES\n");
     return 0;
   }
@@ -91,14 +91,20 @@ int main(int argc, char *argv[]) {
 
   printf("\t\t***** Constructing root tree *****\n\n");
  
+  srand(time(NULL));
   build_tr(&root, TREE_SIZE, CYCLES);
 
-  PRINT_TREES ? traverse_tr(root, REG) : traverse_tr(root, INTACT_CHECK);
-
+  if(PRINT_TREE) {
+    printf("tree:\n");
+    traverse_tr(root, REG);
+  }
+  
   if(PRINT_ADDRS) {
     printf("\ntree addrs:\n");
     traverse_tr(root, ADDRS);
   }
+
+  if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr(root, INTACT_CHECK); }
 
   printf("\n\t\t***** Start collecting *****\n\n");
   clock_t start, end;
@@ -109,12 +115,18 @@ int main(int argc, char *argv[]) {
   printf("Collection time: %fs\n\n", (double)(end - start) / CLOCKS_PER_SEC);
 
   printf("\t\t***** Checking root tree *****\n\n");
-  PRINT_TREES ? traverse_tr(root, REG) : traverse_tr(root, INTACT_CHECK);
+
+  if(PRINT_TREE) {
+    printf("tree:\n");
+    traverse_tr(root, REG);
+  }
 
   if(PRINT_ADDRS) {
     printf("\ntree addrs:\n");
     traverse_tr(root, ADDRS);
   }
+
+  if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr(root, INTACT_CHECK); }
 
   return 0;
 }
