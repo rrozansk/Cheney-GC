@@ -64,7 +64,7 @@ cell_t *halloc() {
 }
 
 void hinit(unsigned long cells) {
-  from = calloc(cells + (cells % 2), sizeof(cell_t));
+  from = calloc(cells += (cells % 2), sizeof(cell_t));
   if(from == NULL) {
     fprintf(stderr, "failure: allocation of heap unsuccessful, exiting...\n");
     exit(EXIT_FAILURE);

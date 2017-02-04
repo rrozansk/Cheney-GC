@@ -97,11 +97,13 @@ int main(int argc, char *argv[]) {
   if(PRINT_TREE) {
     printf("tree:\n");
     traverse_tr(root, REG);
+    printf("\n");
   }
   
   if(PRINT_ADDRS) {
     printf("\ntree addrs:\n");
     traverse_tr(root, ADDRS);
+    printf("\n");
   }
 
   if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr(root, INTACT_CHECK); }
@@ -119,11 +121,13 @@ int main(int argc, char *argv[]) {
   if(PRINT_TREE) {
     printf("tree:\n");
     traverse_tr(root, REG);
+    printf("\n");
   }
 
   if(PRINT_ADDRS) {
     printf("\ntree addrs:\n");
     traverse_tr(root, ADDRS);
+    printf("\n");
   }
 
   if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr(root, INTACT_CHECK); }
