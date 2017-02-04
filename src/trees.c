@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  2/1/17
+ Edited:  2/4/17
 */
 
 /**********************************************************************
@@ -44,7 +44,7 @@ void build_tr(void **r, int cells, int cycles) {
   cell_t *tr_stk[(int)floor((log(cells + 1) - 1) / log(2))];
   int stk_ptr, leaf_c;
 
-  for(leaf_c = 0, stk_ptr = 0;;) {
+  for(leaf_c = 0, stk_ptr = 0;;) { // assign new value to ancestor?
     if(!cells) { 
       set_car(root, genLeaf(&leaf_c, cycles, ancestor));
       set_cdr(root, genLeaf(&leaf_c, cycles, ancestor));
@@ -68,12 +68,11 @@ void build_tr(void **r, int cells, int cycles) {
   }
 }
 
-traversal_t TREE_WALK;
-void print_tr_help(void *tr) {
+void traverse_tr(void *tr, traversal_t walk) {
   if(tr == NULL) { printf("()"); }
   else if(!isPtr(&tr) && !isAtomic(&tr)) { printf("ERR: %p\n", tr); }
   else {
-    switch(TREE_WALK) {
+    switch(walk) {
       case REG:
         if(isAtomic(&tr)) { 
           clrBit((void **)&tr, 0);
@@ -81,9 +80,9 @@ void print_tr_help(void *tr) {
           //free(tr);
         } else {
           printf("(");
-          print_tr_help(((cell_t *)tr)->car);
+          traverse_tr(((cell_t *)tr)->car, walk);
           printf(" . ");
-          print_tr_help(((cell_t *)tr)->cdr);
+          traverse_tr(((cell_t *)tr)->cdr, walk);
           printf(")");
         }
         break;
@@ -97,22 +96,10 @@ void print_tr_help(void *tr) {
         printf("cell: %p\n", tr); // fallthrough
       case INTACT_CHECK:
         if(isPtr(&tr)) {
-          print_tr_help(((cell_t *)tr)->car);
-          print_tr_help(((cell_t *)tr)->cdr);
+          traverse_tr(((cell_t *)tr)->car, walk);
+          traverse_tr(((cell_t *)tr)->cdr, walk);
         }
         break;
     }
   } 
-}
-
-// call exit(EXIT_FAILURE); if intact check fails?? ...can i even!?
-// combine these funcs?
-void traverse_tr(void *tr, traversal_t walk_t) {
-  if(walk_t != REG && walk_t != ADDRS && walk_t != INTACT_CHECK) {
-    fprintf(stderr, "ERROR: unknown traversal type\nexiting...\n");
-    exit(EXIT_FAILURE);
-  }
-  TREE_WALK = walk_t;
-  print_tr_help((void *)tr);
-  printf("\n");
 }
