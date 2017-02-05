@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  2/4/17
+ Edited:  2/5/17
 */
 
 /**********************************************************************
@@ -68,38 +68,59 @@ void build_tr(void **r, int cells, int cycles) {
   }
 }
 
-void traverse_tr(void *tr, traversal_t walk) {
-  if(tr == NULL) { printf("()"); }
-  else if(!isPtr(&tr) && !isAtomic(&tr)) { printf("ERR: %p\n", tr); }
-  else {
-    switch(walk) {
-      case REG:
-        if(isAtomic(&tr)) { 
-          clrBit((void **)&tr, 0);
-          printf("%d", *(int *)tr);
-          //free(tr);
-        } else {
-          printf("(");
-          traverse_tr(((cell_t *)tr)->car, walk);
-          printf(" . ");
-          traverse_tr(((cell_t *)tr)->cdr, walk);
-          printf(")");
-        }
-        break;
-      case ADDRS:
-        if(isAtomic(&tr)) { 
-          clrBit((void **)&tr, 0);
-          printf("\t\tleaf %d: %p\n", *(int *)tr, tr);
-          //free(tr);
-          break;
-        }
-        printf("cell: %p\n", tr); // fallthrough
-      case INTACT_CHECK:
-        if(isPtr(&tr)) {
-          traverse_tr(((cell_t *)tr)->car, walk);
-          traverse_tr(((cell_t *)tr)->cdr, walk);
-        }
-        break;
+typedef cell_t frame_t;
+frame_t *stk() { return NULL; }
+frame_t *push(void *data, frame_t *stk) { 
+  frame_t *f = malloc(sizeof(frame_t)); // so we dont cause a collection
+  f->car = data;
+  f->cdr = stk;
+  return f;
+}
+
+int cycle(cell_t *c, frame_t *stk) {
+  for(; stk != NULL; stk = cdr(stk)) {
+    if(c == car(stk)) { return 1; }
+  }
+  return 0;
+}
+
+void printG(void *g, frame_t *stk, traversal_t walk) {
+  if(g == NULL) { printf("()"); }
+  else if(!isPtr(&g) && !isAtomic(&g)) { printf("ERR: %p\n", g); }
+  else if(isAtomic(&g)) {
+    if(walk == INTACT_CHECK) { return; }
+    else {
+      clrBit(&g, 0);
+      if(walk == REG) { printf("%d", *(int *)g); }
+      else { printf("\t\tleaf %d: %p\n", *(int *)g, g); } 
     }
-  } 
+  } else { // isPtr(g)
+    if(cycle(g, stk)) {
+      if(walk == ADDRS) { printf("\t\tleaf #cycle#: %p\n", g); }
+      else if(walk == INTACT_CHECK) { }
+      else { printf("#cycle#"); }
+      return;
+    } 
+    frame_t *s = push(g, stk);
+    if(walk == INTACT_CHECK) {  
+      printG(car(g), s, walk);
+      printG(cdr(g), s, walk);
+    }
+    else if(walk == REG) {  
+      printf("(");
+      printG(car(g), s, walk);
+      printf(" . ");
+      printG(cdr(g), s, walk);
+      printf(")");
+    } else { // ADDRS
+      printf("cell: %p\n", g);
+      printG(car(g), s, walk);
+      printG(cdr(g), s, walk);
+    }
+  }
+}
+
+void traverse_tr(void *tr, traversal_t walk) {
+  printG(tr, stk(), walk);
+  printf("\n");
 }
