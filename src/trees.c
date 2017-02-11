@@ -44,7 +44,7 @@ void build_tr(void **r, int cells, int cycles) {
   cell_t *tr_stk[(int)floor((log(cells + 1) - 1) / log(2))];
   int stk_ptr, leaf_c;
 
-  for(leaf_c = 0, stk_ptr = 0;;) { // assign new value to ancestor?
+  for(leaf_c = 0, stk_ptr = 0;;) {
     if(!cells) { 
       set_car(root, genLeaf(&leaf_c, cycles, ancestor));
       set_cdr(root, genLeaf(&leaf_c, cycles, ancestor));
@@ -53,12 +53,16 @@ void build_tr(void **r, int cells, int cycles) {
       root = tr_stk[stk_ptr--];
     } else if(cells == 1) {
       set_car(root, cons(NULL, NULL));
+      if(rand() % 2) { ancestor = car(root); }
       cells--;
       set_cdr(root, genLeaf(&leaf_c, cycles, ancestor));
       root = car(root);
     } else {
       set_car(root, cons(NULL, NULL));
       set_cdr(root, cons(NULL, NULL));
+      int r = rand() % 3;
+      if(r == 1) { ancestor = car(root); }
+      if(r == 2) { ancestor = cdr(root); }
       cells -= 2;
       size_stk[++stk_ptr] = cells - (cells / 2);
       cells = cells / 2;
@@ -68,59 +72,83 @@ void build_tr(void **r, int cells, int cycles) {
   }
 }
 
-typedef cell_t frame_t;
-frame_t *stk() { return NULL; }
-frame_t *push(void *data, frame_t *stk) { 
-  frame_t *f = malloc(sizeof(frame_t)); // so we dont cause a collection
-  f->car = data;
-  f->cdr = stk;
-  return f;
+typedef struct hash_t {
+  unsigned long size;
+  cell_t **tbl;
+} hash_t;
+
+hash_t *hash(unsigned long size) {
+  hash_t *hash = malloc(sizeof(hash_t));
+  hash->size = size;
+  hash->tbl = calloc(size, sizeof(cell_t *));
+  return hash;
 }
 
-int cycle(cell_t *c, frame_t *stk) {
-  for(; stk != NULL; stk = cdr(stk)) {
-    if(c == car(stk)) { return 1; }
+void hash_insert(hash_t *h, cell_t *cell, int *cell_pos) {
+  int loc = (*(int *)cell * 15485863) % h->size;
+  cell_t *bucket = *(h->tbl + loc);
+  for(; bucket; bucket = cdr(bucket)) {
+    if(car(car(bucket)) == cell) { return; } // already exists
   }
-  return 0;
+  cell_t *elem = malloc(sizeof(cell_t));
+  set_car(elem, cell);
+  set_cdr(elem, cell_pos);
+  cell_t *link = malloc(sizeof(cell_t));
+  set_car(link, elem);
+  set_cdr(link, *(h->tbl + loc));
+  *(h->tbl + loc) = link;
 }
 
-void printG(void *g, frame_t *stk, traversal_t walk) {
-  if(g == NULL) { printf("()"); }
-  else if(!isPtr(&g) && !isAtomic(&g)) { printf("ERR: %p\n", g); }
-  else if(isAtomic(&g)) {
-    if(walk == INTACT_CHECK) { return; }
-    else {
-      clrBit(&g, 0);
-      if(walk == REG) { printf("%d", *(int *)g); }
-      else { printf("\t\tleaf %d: %p\n", *(int *)g, g); } 
-    }
-  } else { // isPtr(g)
-    if(cycle(g, stk)) {
-      if(walk == ADDRS) { printf("\t\tleaf #cycle#: %p\n", g); }
-      else if(walk == INTACT_CHECK) { }
-      else { printf("#cycle#"); }
-      return;
-    } 
-    frame_t *s = push(g, stk);
-    if(walk == INTACT_CHECK) {  
-      printG(car(g), s, walk);
-      printG(cdr(g), s, walk);
-    }
-    else if(walk == REG) {  
+int hash_ref(hash_t *h, cell_t *cell) {
+  int loc = (*(int *)cell * 15485863) % h->size;
+  cell_t *bucket = *(h->tbl + loc);
+  for(; bucket && car(car(bucket)) != cell; bucket = cdr(bucket));
+  if(!bucket) { return 0; } // not found
+  return *(int *)cdr(car(bucket));
+}
+
+int c;
+
+void print_help(void *tr, traversal_t walk, hash_t *seen) {
+  int loc;
+  if(tr == NULL) { 
+    printf("()"); 
+  } else if(isAtomic(&tr)) {
+    clrBit(&tr, 0);
+    if(walk == REG) { 
+      printf("%d", *(int *)tr); 
+    } else if(walk == ADDRS) { 
+      printf("\t\tleaf %d: %p\n", *(int *)tr, tr); 
+    } else {  } // walk == INTACK_CHECK
+  } else if(isPtr(&tr) && (loc = hash_ref(seen, tr))) {
+    if(walk == ADDRS) { printf("\t\tleaf #cycle: %d#: %p\n", loc, tr); }
+    else if(walk == INTACT_CHECK) { }
+    else { printf("#cycle: %d#", loc); }
+  } else if(isPtr(&tr)) {
+    int *i = malloc(sizeof(int));
+    *i = c++;
+    hash_insert(seen, tr, i);
+    if(walk == REG) { 
       printf("(");
-      printG(car(g), s, walk);
+      print_help(car(tr), walk, seen);
       printf(" . ");
-      printG(cdr(g), s, walk);
+      print_help(cdr(tr), walk, seen);
       printf(")");
-    } else { // ADDRS
-      printf("cell: %p\n", g);
-      printG(car(g), s, walk);
-      printG(cdr(g), s, walk);
+    } else if(walk == ADDRS) { 
+      printf("cell: %p\n", tr);
+      print_help(car(tr), walk, seen);
+      print_help(cdr(tr), walk, seen);
+    } else {  // walk == INTACK_CHECK
+      print_help(car(tr), walk, seen);
+      print_help(cdr(tr), walk, seen);
     }
+  } else { 
+    printf("ERR: %p\n", tr); 
   }
 }
 
 void traverse_tr(void *tr, traversal_t walk) {
-  printG(tr, stk(), walk);
+  c = 1;
+  print_help(tr, walk, hash(1000));
   printf("\n");
 }
