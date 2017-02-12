@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  1/31/17
+ Edited:  2/12/17
 */
 
 #ifndef TREES_STRUCT_DEFS
@@ -25,6 +25,6 @@ typedef enum { REG, ADDRS, INTACT_CHECK } traversal_t;
 
 ***********************************************************************/
 void build_tr(void **root, int cells, int cycles);
-void traverse_tr(void *tr, traversal_t walk);
+void traverse_tr(void *tr, int cells, traversal_t walk);
 
 #endif

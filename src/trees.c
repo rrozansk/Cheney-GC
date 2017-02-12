@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  2/5/17
+ Edited:  2/12/17
 */
 
 /**********************************************************************
@@ -16,7 +16,6 @@
 ***********************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <cheney.h>
 #include <trees.h>
 #include <bits.h>
@@ -84,7 +83,7 @@ hash_t *hash(unsigned long size) {
   return hash;
 }
 
-void hash_insert(hash_t *h, cell_t *cell, int *cell_pos) {
+void hash_insert(hash_t *h, cell_t *cell, int cell_pos) {
   int loc = (*(int *)cell * 15485863) % h->size;
   cell_t *bucket = *(h->tbl + loc);
   for(; bucket; bucket = cdr(bucket)) {
@@ -92,7 +91,9 @@ void hash_insert(hash_t *h, cell_t *cell, int *cell_pos) {
   }
   cell_t *elem = malloc(sizeof(cell_t));
   set_car(elem, cell);
-  set_cdr(elem, cell_pos);
+  int *i = malloc(sizeof(int));
+  *i = cell_pos;
+  set_cdr(elem, i);
   cell_t *link = malloc(sizeof(cell_t));
   set_car(link, elem);
   set_cdr(link, *(h->tbl + loc));
@@ -107,48 +108,37 @@ int hash_ref(hash_t *h, cell_t *cell) {
   return *(int *)cdr(car(bucket));
 }
 
-int c;
+void traverse_tr(void *tr, int cells, traversal_t walk) {
+  int loc, stk_ptr, flag;
+  hash_t *seen = hash(1000);
+  void *stk[(int)floor((log(cells + 1) - 1) / log(2))];
 
-void print_help(void *tr, traversal_t walk, hash_t *seen) {
-  int loc;
-  if(tr == NULL) { 
-    printf("()"); 
-  } else if(isAtomic(&tr)) {
-    clrBit(&tr, 0);
-    if(walk == REG) { 
-      printf("%d", *(int *)tr); 
-    } else if(walk == ADDRS) { 
-      printf("\t\tleaf %d: %p\n", *(int *)tr, tr); 
-    } else {  } // walk == INTACK_CHECK
-  } else if(isPtr(&tr) && (loc = hash_ref(seen, tr))) {
-    if(walk == ADDRS) { printf("\t\tleaf #cycle: %d#: %p\n", loc, tr); }
-    else if(walk == INTACT_CHECK) { }
-    else { printf("#cycle: %d#", loc); }
-  } else if(isPtr(&tr)) {
-    int *i = malloc(sizeof(int));
-    *i = c++;
-    hash_insert(seen, tr, i);
-    if(walk == REG) { 
-      printf("(");
-      print_help(car(tr), walk, seen);
-      printf(" . ");
-      print_help(cdr(tr), walk, seen);
-      printf(")");
-    } else if(walk == ADDRS) { 
-      printf("cell: %p\n", tr);
-      print_help(car(tr), walk, seen);
-      print_help(cdr(tr), walk, seen);
-    } else {  // walk == INTACK_CHECK
-      print_help(car(tr), walk, seen);
-      print_help(cdr(tr), walk, seen);
+  for(cells = 1, stk_ptr = 0, flag = 0, loc = 0;;) {
+    if(isAtomic(&tr) || (loc = hash_ref(seen, tr))) {
+      if(!loc) { clrBit(&tr, 0); }
+      if(walk == REG) { 
+        loc ? printf("#cycle: %d#", loc) : printf("%d", *(int *)tr);
+        if(flag) { printf(")"); }
+        if(stk_ptr) { printf(" . "); }
+        flag = 1; // printing cdr next
+      }
+      if(walk == ADDRS) {
+        printf("\t\tleaf ");
+        loc ? printf("#cycle: %d#: %p\n", loc, tr) : printf("%d: %p\n", *(int *)tr, tr);
+      } 
+      if(!stk_ptr) { 
+        if(flag) { printf(")"); }
+        break; 
+      }
+      tr = stk[stk_ptr--]; 
+    } else { // isPtr(&tr)
+      if(walk == REG) { printf("("); }
+      if(walk == ADDRS) { printf("cell: %p\n", tr); } 
+      hash_insert(seen, tr, cells++);
+      flag = 0;
+      stk[++stk_ptr] = cdr(tr); 
+      tr = car(tr);
     }
-  } else { 
-    printf("ERR: %p\n", tr); 
   }
-}
-
-void traverse_tr(void *tr, traversal_t walk) {
-  c = 1;
-  print_help(tr, walk, hash(1000));
   printf("\n");
 }
