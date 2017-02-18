@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  2/12/17
+ Edited:  2/16/17
 */
 
 /**********************************************************************
@@ -41,13 +41,12 @@ void build_tr(void **r, int cells, int cycles) {
 
   int size_stk[(int)floor((log(cells + 1) - 1) / log(2))];
   cell_t *tr_stk[(int)floor((log(cells + 1) - 1) / log(2))];
-  int stk_ptr, leaf_c;
+  int stk_ptr, leaf_c, rn;
 
-  for(leaf_c = 0, stk_ptr = 0;;) {
+  for(leaf_c = stk_ptr = 0; root != tr_stk[0];) {
     if(!cells) { 
       set_car(root, genLeaf(&leaf_c, cycles, ancestor));
       set_cdr(root, genLeaf(&leaf_c, cycles, ancestor));
-      if(!stk_ptr) { return; }
       cells = size_stk[stk_ptr];
       root = tr_stk[stk_ptr--];
     } else if(cells == 1) {
@@ -59,9 +58,9 @@ void build_tr(void **r, int cells, int cycles) {
     } else {
       set_car(root, cons(NULL, NULL));
       set_cdr(root, cons(NULL, NULL));
-      int r = rand() % 3;
-      if(r == 1) { ancestor = car(root); }
-      if(r == 2) { ancestor = cdr(root); }
+      rn = rand() % 3;
+      if(rn == 1) { ancestor = car(root); }
+      if(rn == 2) { ancestor = cdr(root); }
       cells -= 2;
       size_stk[++stk_ptr] = cells - (cells / 2);
       cells = cells / 2;
@@ -109,35 +108,36 @@ int hash_ref(hash_t *h, cell_t *cell) {
 }
 
 void traverse_tr(void *tr, int cells, traversal_t walk) {
-  int loc, stk_ptr, flag;
+  int loc, stk_ptr, flag, rp;
   hash_t *seen = hash(1000);
+  int max = (int)floor((log(cells + 1) - 1) / log(2)); // TODO: do max/stk_ptr play roles for # or parens to print?
   void *stk[(int)floor((log(cells + 1) - 1) / log(2))];
+  printf("STK MAX: %d\n", max);
 
-  for(cells = 1, stk_ptr = 0, flag = 0, loc = 0;;) {
+  for(cells = 1, stk_ptr = flag = loc = rp = 0; tr != stk[0];) {
     if(isAtomic(&tr) || (loc = hash_ref(seen, tr))) {
       if(!loc) { clrBit(&tr, 0); }
+      if(walk == ADDRS) {
+        loc ? printf("\t\tleaf #cycle: %d#: %p\n", loc, tr) : printf("\t\tleaf %d: %p\n", *(int *)tr, tr);
+      }
       if(walk == REG) { 
         loc ? printf("#cycle: %d#", loc) : printf("%d", *(int *)tr);
-        if(flag) { printf(")"); }
+        if(flag) { do { printf(")"); } while(--rp > stk_ptr); } // FIXME: print correct # of ')'
         if(stk_ptr) { printf(" . "); }
-        flag = 1; // printing cdr next
       }
-      if(walk == ADDRS) {
-        printf("\t\tleaf ");
-        loc ? printf("#cycle: %d#: %p\n", loc, tr) : printf("%d: %p\n", *(int *)tr, tr);
-      } 
-      if(!stk_ptr) { 
-        if(flag) { printf(")"); }
-        break; 
-      }
+      flag = 1; // printing cdr
       tr = stk[stk_ptr--]; 
-    } else { // isPtr(&tr)
-      if(walk == REG) { printf("("); }
+    } else if(isPtr(&tr)) {
       if(walk == ADDRS) { printf("cell: %p\n", tr); } 
+      if(walk == REG) { printf("(");  }
       hash_insert(seen, tr, cells++);
-      flag = 0;
+      rp++; // right parens building up to be printed
+      flag = 0; // printing car
       stk[++stk_ptr] = cdr(tr); 
       tr = car(tr);
+    } else {
+      printf("error: unrecognized type\n");
+      return;
     }
   }
   printf("\n");
