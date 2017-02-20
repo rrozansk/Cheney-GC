@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  2/19/17
+ Edited:  2/20/17
 */
 
 /**********************************************************************
@@ -34,7 +34,7 @@ void build_tr(void **r, int cells, int cycles) {
 
   for(leaf = stk_ptr = 0; r != tr_stk[0];) {
     if(!cells) { 
-      if(cycles && rand() % 2) { 
+      if(cycles && rand() % 2 && ancestor) {
         *r = ancestor;
       } else {
         *(i = malloc(sizeof(int))) = leaf++;
@@ -56,7 +56,8 @@ void build_tr(void **r, int cells, int cycles) {
 }
 
 typedef struct hash_t {
-  unsigned long size;
+  //unsigned long size; // problem with comparison >= 0 in hash_free
+  long size;
   cell_t **tbl;
 } hash_t;
 
@@ -92,6 +93,22 @@ int hash_ref(hash_t *h, cell_t *cell) {
   return *(int *)cdr(car(bucket));
 }
 
+void hash_free(hash_t *h) {
+  cell_t *buckets, *bucket, *link;
+  for(h->size -= 1, buckets = *(h->tbl + h->size); h->size >= 0; h->size -= 1) {
+    for(; buckets;) {
+      bucket = car(buckets);
+      link = buckets;
+      buckets = cdr(buckets);
+      free(link);
+      free(cdr(bucket));
+      free(bucket);
+    }
+  }
+  free(h->tbl);
+  free(h);
+}
+
 void traverse_tr_intact(void *tr, int cells) { 
   hash_t *seen = hash(1000);
   void *stk[(int)ceil(log(cells + 1) / log(2))];
@@ -108,6 +125,7 @@ void traverse_tr_intact(void *tr, int cells) {
       exit(EXIT_FAILURE);
     }
   }
+  hash_free(seen);
 }
 
 void traverse_tr_addrs(void *tr, int cells) { 
@@ -131,6 +149,7 @@ void traverse_tr_addrs(void *tr, int cells) {
     }
   }
   printf("\n");
+  hash_free(seen);
 }
 
 void traverse_tr(void *tr, int cells) {
@@ -156,4 +175,5 @@ void traverse_tr(void *tr, int cells) {
     }
   }
   printf("\n");
+  hash_free(seen);
 }
