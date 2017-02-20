@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  2/12/17
+ Edited:  2/19/17
 */
 
 /**********************************************************************
@@ -96,15 +96,15 @@ int main(int argc, char *argv[]) {
 
   if(PRINT_TREE) {
     printf("tree:\n");
-    traverse_tr(root, TREE_SIZE, REG);
+    traverse_tr(root, TREE_SIZE);
   }
   
   if(PRINT_ADDRS) {
     printf("\ntree addrs:\n");
-    traverse_tr(root, TREE_SIZE, ADDRS);
+    traverse_tr_addrs(root, TREE_SIZE);
   }
 
-  if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr(root, TREE_SIZE, INTACT_CHECK); }
+  if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr_intact(root, TREE_SIZE); }
 
   printf("\n\t\t***** Start collecting *****\n\n");
   clock_t start, end;
@@ -118,15 +118,15 @@ int main(int argc, char *argv[]) {
 
   if(PRINT_TREE) {
     printf("tree:\n");
-    traverse_tr(root, TREE_SIZE, REG);
+    traverse_tr(root, TREE_SIZE);
   }
 
   if(PRINT_ADDRS) {
     printf("\ntree addrs:\n");
-    traverse_tr(root, TREE_SIZE, ADDRS);
+    traverse_tr_addrs(root, TREE_SIZE);
   }
 
-  if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr(root, TREE_SIZE, INTACT_CHECK); }
+  if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr_intact(root, TREE_SIZE); }
 
   return 0;
 }

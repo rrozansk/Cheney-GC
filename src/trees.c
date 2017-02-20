@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  2/16/17
+ Edited:  2/19/17
 */
 
 /**********************************************************************
@@ -26,46 +26,31 @@
       F U N C T I O N S
 
 ***********************************************************************/
-void *genLeaf(int *count, int cycles, cell_t *ancestor) {
-  if(cycles && rand() % 2) { return ancestor;  }
-  void *i = malloc(sizeof(int));
-  *(int *)i = (*count)++;
-  setBit((void **)&i, 0);
-  return i;
-}
- 
 void build_tr(void **r, int cells, int cycles) {
-  cell_t *ancestor, *root; 
-  *r = ancestor = root = cons(NULL, NULL);
-  cells--;
+  int size_stk[(int)ceil(log(cells + 1) / log(2))];
+  void **tr_stk[(int)ceil(log(cells + 1) / log(2))];
+  cell_t *ancestor = NULL;
+  int stk_ptr, leaf, *i;
 
-  int size_stk[(int)floor((log(cells + 1) - 1) / log(2))];
-  cell_t *tr_stk[(int)floor((log(cells + 1) - 1) / log(2))];
-  int stk_ptr, leaf_c, rn;
-
-  for(leaf_c = stk_ptr = 0; root != tr_stk[0];) {
+  for(leaf = stk_ptr = 0; r != tr_stk[0];) {
     if(!cells) { 
-      set_car(root, genLeaf(&leaf_c, cycles, ancestor));
-      set_cdr(root, genLeaf(&leaf_c, cycles, ancestor));
+      if(cycles && rand() % 2) { 
+        *r = ancestor;
+      } else {
+        *(i = malloc(sizeof(int))) = leaf++;
+        setBit((void **)&i, 0);
+        *r = i;
+      }
       cells = size_stk[stk_ptr];
-      root = tr_stk[stk_ptr--];
-    } else if(cells == 1) {
-      set_car(root, cons(NULL, NULL));
-      if(rand() % 2) { ancestor = car(root); }
-      cells--;
-      set_cdr(root, genLeaf(&leaf_c, cycles, ancestor));
-      root = car(root);
+      r = tr_stk[stk_ptr--];
     } else {
-      set_car(root, cons(NULL, NULL));
-      set_cdr(root, cons(NULL, NULL));
-      rn = rand() % 3;
-      if(rn == 1) { ancestor = car(root); }
-      if(rn == 2) { ancestor = cdr(root); }
-      cells -= 2;
-      size_stk[++stk_ptr] = cells - (cells / 2);
-      cells = cells / 2;
-      tr_stk[stk_ptr] = cdr(root);
-      root = car(root);
+      *r = cons(NULL, NULL);
+      cells--;
+      if(rand() % 2 || !ancestor) { ancestor = *r; }
+      size_stk[++stk_ptr] = cells / 2;
+      cells -= cells / 2;
+      tr_stk[stk_ptr] = &(((cell_t *)(*r))->cdr);
+      r = &(((cell_t *)(*r))->car);
     }
   }
 }
@@ -83,7 +68,7 @@ hash_t *hash(unsigned long size) {
 }
 
 void hash_insert(hash_t *h, cell_t *cell, int cell_pos) {
-  int loc = (*(int *)cell * 15485863) % h->size;
+  int loc = (*(int *)cell * 53) % h->size;
   cell_t *bucket = *(h->tbl + loc);
   for(; bucket; bucket = cdr(bucket)) {
     if(car(car(bucket)) == cell) { return; } // already exists
@@ -100,44 +85,74 @@ void hash_insert(hash_t *h, cell_t *cell, int cell_pos) {
 }
 
 int hash_ref(hash_t *h, cell_t *cell) {
-  int loc = (*(int *)cell * 15485863) % h->size;
+  int loc = (*(int *)cell * 53) % h->size;
   cell_t *bucket = *(h->tbl + loc);
   for(; bucket && car(car(bucket)) != cell; bucket = cdr(bucket));
   if(!bucket) { return 0; } // not found
   return *(int *)cdr(car(bucket));
 }
 
-void traverse_tr(void *tr, int cells, traversal_t walk) {
-  int loc, stk_ptr, flag, rp;
+void traverse_tr_intact(void *tr, int cells) { 
   hash_t *seen = hash(1000);
-  int max = (int)floor((log(cells + 1) - 1) / log(2)); // TODO: do max/stk_ptr play roles for # or parens to print?
-  void *stk[(int)floor((log(cells + 1) - 1) / log(2))];
-  printf("STK MAX: %d\n", max);
+  void *stk[(int)ceil(log(cells + 1) / log(2))];
 
-  for(cells = 1, stk_ptr = flag = loc = rp = 0; tr != stk[0];) {
-    if(isAtomic(&tr) || (loc = hash_ref(seen, tr))) {
-      if(!loc) { clrBit(&tr, 0); }
-      if(walk == ADDRS) {
-        loc ? printf("\t\tleaf #cycle: %d#: %p\n", loc, tr) : printf("\t\tleaf %d: %p\n", *(int *)tr, tr);
-      }
-      if(walk == REG) { 
-        loc ? printf("#cycle: %d#", loc) : printf("%d", *(int *)tr);
-        if(flag) { do { printf(")"); } while(--rp > stk_ptr); } // FIXME: print correct # of ')'
-        if(stk_ptr) { printf(" . "); }
-      }
-      flag = 1; // printing cdr
-      tr = stk[stk_ptr--]; 
+  for(cells = 0; tr != stk[0];) { // cells as stk_ptr
+    if(isAtomic(&tr) || hash_ref(seen, tr)) {
+      tr = stk[cells--];
     } else if(isPtr(&tr)) {
-      if(walk == ADDRS) { printf("cell: %p\n", tr); } 
-      if(walk == REG) { printf("(");  }
-      hash_insert(seen, tr, cells++);
-      rp++; // right parens building up to be printed
-      flag = 0; // printing car
-      stk[++stk_ptr] = cdr(tr); 
+      hash_insert(seen, tr, 1);
+      stk[++cells] = cdr(tr);
       tr = car(tr);
     } else {
-      printf("error: unrecognized type\n");
-      return;
+      fprintf(stderr, "error: unrecognized type in generated tree\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+}
+
+void traverse_tr_addrs(void *tr, int cells) { 
+  int loc, stk_ptr;
+  hash_t *seen = hash(1000);
+  void *stk[(int)ceil(log(cells + 1) / log(2))];
+
+  for(cells = 1, stk_ptr = loc = 0; tr != stk[0];) {
+    if(isAtomic(&tr) || (loc = hash_ref(seen, tr))) {
+      if(!loc) { clrBit(&tr, 0); }
+      loc ? printf("\t\tleaf #cycle %d#: %p\n", loc, tr) : printf("\t\tleaf %d: %p\n", *(int *)tr, tr);
+      tr = stk[stk_ptr--];
+    } else if(isPtr(&tr)) {
+      printf("cell: %p\n", tr);
+      hash_insert(seen, tr, cells++);
+      stk[++stk_ptr] = cdr(tr);
+      tr = car(tr);
+    } else {
+      fprintf(stderr, "error: unrecognized type in generated tree\n");
+      exit(EXIT_FAILURE);
+    }
+  }
+  printf("\n");
+}
+
+void traverse_tr(void *tr, int cells) {
+  int loc, stk_ptr;
+  hash_t *seen = hash(1000);
+  void *stk[(int)ceil(log(cells + 1) / log(2))];
+
+  for(cells = 1, stk_ptr = loc = 0; tr != stk[0];) {
+    if(isAtomic(&tr) || (loc = hash_ref(seen, tr))) {
+      if(!loc) { clrBit(&tr, 0); }
+      loc ? printf("#cycle: %d#", loc) : printf("%d", *(int *)tr); 
+      for(; 0;) { printf(")"); } // FIXME: print correct number of right parens
+      if(stk_ptr) { printf(" . "); }
+      tr = stk[stk_ptr--];
+    } else if(isPtr(&tr)) {
+      printf("(");
+      hash_insert(seen, tr, cells++);
+      stk[++stk_ptr] = cdr(tr);
+      tr = car(tr);
+    } else {
+      fprintf(stderr, "error: unrecognized type in generated tree\n");
+      exit(EXIT_FAILURE);
     }
   }
   printf("\n");
