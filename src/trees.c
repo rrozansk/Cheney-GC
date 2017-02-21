@@ -6,7 +6,7 @@
 /*
  Author:  Ryan Rozanski
  Created: 1/15/17
- Edited:  2/20/17
+ Edited:  2/21/17
 */
 
 /**********************************************************************
@@ -27,8 +27,8 @@
 
 ***********************************************************************/
 void build_tr(void **r, int cells, int cycles) {
-  int size_stk[(int)ceil(log(cells + 1) / log(2))];
-  void **tr_stk[(int)ceil(log(cells + 1) / log(2))];
+  int size_stk[(int)ceil(log(cells + 1) / log(2))+1];
+  void **tr_stk[(int)ceil(log(cells + 1) / log(2))+1];
   cell_t *ancestor = NULL;
   int stk_ptr, leaf, *i;
 
@@ -69,7 +69,7 @@ hash_t *hash(unsigned long size) {
 }
 
 void hash_insert(hash_t *h, cell_t *cell, int cell_pos) {
-  int loc = (*(int *)cell * 53) % h->size;
+  int loc = (*(unsigned int *)cell * 53) % h->size;
   cell_t *bucket = *(h->tbl + loc);
   for(; bucket; bucket = cdr(bucket)) {
     if(car(car(bucket)) == cell) { return; } // already exists
@@ -86,7 +86,7 @@ void hash_insert(hash_t *h, cell_t *cell, int cell_pos) {
 }
 
 int hash_ref(hash_t *h, cell_t *cell) {
-  int loc = (*(int *)cell * 53) % h->size;
+  int loc = (*(unsigned int *)cell * 53) % h->size; // int was giving negatives sometimes
   cell_t *bucket = *(h->tbl + loc);
   for(; bucket && car(car(bucket)) != cell; bucket = cdr(bucket));
   if(!bucket) { return 0; } // not found
@@ -111,7 +111,7 @@ void hash_free(hash_t *h) {
 
 void traverse_tr_intact(void *tr, int cells) { 
   hash_t *seen = hash(1000);
-  void *stk[(int)ceil(log(cells + 1) / log(2))];
+  void *stk[(int)ceil(log(cells + 1) / log(2)) + 1];
 
   for(cells = 0; tr != stk[0];) { // cells as stk_ptr
     if(isAtomic(&tr) || hash_ref(seen, tr)) {
@@ -131,7 +131,7 @@ void traverse_tr_intact(void *tr, int cells) {
 void traverse_tr_addrs(void *tr, int cells) { 
   int loc, stk_ptr;
   hash_t *seen = hash(1000);
-  void *stk[(int)ceil(log(cells + 1) / log(2))];
+  void *stk[(int)ceil(log(cells + 1) / log(2)) + 1];
 
   for(cells = 1, stk_ptr = loc = 0; tr != stk[0];) {
     if(isAtomic(&tr) || (loc = hash_ref(seen, tr))) {
@@ -155,18 +155,22 @@ void traverse_tr_addrs(void *tr, int cells) {
 void traverse_tr(void *tr, int cells) {
   int loc, stk_ptr;
   hash_t *seen = hash(1000);
-  void *stk[(int)ceil(log(cells + 1) / log(2))];
+  cells = (int)ceil(log(cells + 1) / log(2)) + 1;
+  void *stk[cells];
+  int parens[cells];
+  for(cells--; cells >= 0; cells--) { parens[cells] = 0; }
 
   for(cells = 1, stk_ptr = loc = 0; tr != stk[0];) {
     if(isAtomic(&tr) || (loc = hash_ref(seen, tr))) {
       if(!loc) { clrBit(&tr, 0); }
       loc ? printf("#cycle: %d#", loc) : printf("%d", *(int *)tr); 
-      for(; 0;) { printf(")"); } // FIXME: print correct number of right parens
+      for(; parens[stk_ptr]; parens[stk_ptr]--) { printf(")"); }
       if(stk_ptr) { printf(" . "); }
       tr = stk[stk_ptr--];
     } else if(isPtr(&tr)) {
       printf("(");
       hash_insert(seen, tr, cells++);
+      parens[stk_ptr]++;
       stk[++stk_ptr] = cdr(tr);
       tr = car(tr);
     } else {
@@ -174,6 +178,7 @@ void traverse_tr(void *tr, int cells) {
       exit(EXIT_FAILURE);
     }
   }
+  for(; parens[0]; parens[0]--) { printf(")"); }
   printf("\n");
   hash_free(seen);
 }
