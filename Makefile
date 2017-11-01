@@ -1,27 +1,55 @@
-# compiler to use
+# compiler to use gcc, clang, g++, etc.
 CC = gcc
-# flags to compiler -g (debug flag)
+# compiler flags (add -g for debug)
 CFLAGS = -Wall -O3
-# include
+# includes (header file locations)
 INCLUDES = -I/include/ -Iinclude/
-# lib
+# libraries (library file location)
 LFLAGS = -L/lib/
-# link libs
+# libraries to link
 LIBS = -lm
-# source files
-SRCS = src/bits.c src/cheney.c src/trees.c src/test.c
+# all the files to include in the generated .tar
+TAR_FILES = include/*.h src/*.c test/*.c LICENSE.txt Makefile README.md
+# garbage collection main executable
+MAIN_DEPS = include/cheney.h src/cheney.c src/main.c
 # auto-generate the object files
-OBJS = $(SRCS:.c=.o)
+MAIN_OBJS = $(MAIN_DEPS:.c=.o)
 # define the executable file
 MAIN = cheney
+# garbage collection test executable
+TEST_DEPS = include/cheney.h src/cheney.c test/testCHENEY.c
+# auto-generate the object files
+TEST_OBJS = $(TEST_DEPS:.c=.o)
+# define the executable file
+TEST = ctest
 
-all:    $(MAIN)
+# targets not dependent on files so make doesnt get confused
+.PHONY:  default build rebuild all install clean tar
 
-$(MAIN): $(OBJS) 
-	        $(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
+default: $(MAIN)
+
+build:   $(MAIN)
+
+rebuild: clean build
+
+all:     $(MAIN)
+
+$(MAIN): $(MAIN_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(MAIN_OBJS) $(LFLAGS) $(LIBS)
 
 .c.o:
-	        $(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
+
+install:  rebuild
+	\cp $(MAIN) /usr/bin/
 
 clean:
-	        $(RM) *.o *~ $(MAIN) $(OBJS)
+	\rm -f *.o *~ src/*.o src/*~ test/*.o test/*~ $(MAIN)
+
+tar:
+	\tar -cvf $(MAIN).tar $(TAR_FILES)
+
+$(TEST): $(TEST_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST) $(TEST_OBJS) $(LFLAGS) $(LIBS)
+	./$(TEST)
+	\rm -f *.o *~ src/*.o src/*~ test/*.o test/*~ $(TEST)
