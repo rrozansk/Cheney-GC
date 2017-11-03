@@ -2,8 +2,8 @@
  * FILE:    testCHENEY.c                                                      *
  * AUTHOR:  Ryan Rozanski                                                     *
  * CREATED: 10/31/17                                                          *
- * EDITED:  10/31/17                                                          *
- * INFO:    ...                                                               *
+ * EDITED:  11/1/17                                                           *
+ * INFO:    Test file for implementation of the interface located in cheney.h *
  *                                                                            *
  ******************************************************************************/
 
@@ -29,7 +29,7 @@ void *root; // define root for the garbage collector
  *   C O N S T A N T S                                                        *
  *                                                                            *
  ******************************************************************************/
-#define TOTAL_TESTS 1
+#define TOTAL_TESTS 18
 
 /******************************************************************************
  *                                                                            *
@@ -43,8 +43,91 @@ typedef enum testResultCHENEY { CHENEY_PASS, CHENEY_FAIL } testResultCHENEY_t;
  *   T E S T S                                                                *
  *                                                                            *
  ******************************************************************************/   
-testResultCHENEY_t test___() {
-  // CHENEY_PASS 
+testResultCHENEY_t testAtomicNullCheck() {
+  int *i = (int *)NULL;
+  return (isAtomic((void **)&i)) ? CHENEY_PASS : CHENEY_FAIL;
+}
+
+testResultCHENEY_t testAtomicCheckSuccess() {
+  int *i = (int *)0b1;
+  return (isAtomic((void **)&i)) ? CHENEY_PASS : CHENEY_FAIL;
+}
+
+testResultCHENEY_t testAtomicCheckFailure() {
+  int *i = (int *)0b0; // 0b0 == NULL
+  return (isAtomic((void **)&i)) ? CHENEY_PASS : CHENEY_FAIL;
+}
+
+testResultCHENEY_t testPointerNullCheck() {
+  int *i = (int *)NULL;
+  return (isPtr((void **)&i)) ? CHENEY_FAIL : CHENEY_PASS;
+}
+
+testResultCHENEY_t testPointerCheckSuccess() { // 0b0 == NULL
+  int *i = (int *)0b0;
+  return (isPtr((void **)&i)) ? CHENEY_FAIL : CHENEY_PASS;
+}
+
+testResultCHENEY_t testPointerCheckFailure() {
+  int *i = (int *)0b1;
+  return (isPtr((void **)&i)) ? CHENEY_FAIL : CHENEY_PASS;
+}
+
+testResultCHENEY_t testInitCollectorEvenCells() {
+// void hinit(unsigned long cells) {
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testInitCollectorOddCells() {
+// void hinit(unsigned long cells) {
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testAutomaticCollection() {
+// void collect() {
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testManualCollection() {
+// void collect() {
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testCellAlloc() {
+// cell_t *halloc() {
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testConsCellAlloc() {
+// cell_t *cons(void *car, void *cdr) {
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testConsCellCar() {
+// void *car(cell_t *cell) { return cell->car;  }
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testConsCellCdr() {
+// void *cdr(cell_t *cell) { return cell->cdr; }
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testConsCellSetCar() {
+// void set_car(cell_t *cell, void *v) { cell->car = v;  }
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testConsCellSetCdr() {
+// void set_cdr(cell_t *cell, void *v) { cell->cdr = v;  }
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testCyclicCollection() {
+  return CHENEY_FAIL;
+}
+
+testResultCHENEY_t testDynamicHeapExpansion() {
   return CHENEY_FAIL;
 }
 
@@ -54,7 +137,24 @@ testResultCHENEY_t test___() {
  *                                                                            *
  ******************************************************************************/
 void *TESTS[TOTAL_TESTS][2] = {
-  { test___,                                      "test___"                   },
+  { testAtomicNullCheck,                      "testAtomicNullCheck"           },
+  { testAtomicCheckSuccess,                   "testAtomicCheckSuccess"        },
+  { testAtomicCheckFailure,                   "testAtomicCheckFailure"        },
+  { testPointerNullCheck,                     "testPointerNullCheck"          },
+  { testPointerCheckSuccess,                  "testPointerCheckSuccess"       },
+  { testPointerCheckFailure,                  "testPointerCheckFailure"       },
+  { testInitCollectorEvenCells,               "testInitCollectorEvenCells"    },
+  { testInitCollectorOddCells,                "testInitCollectorOddCells"     },
+  { testAutomaticCollection,                  "testAutomaticCollection"       },
+  { testManualCollection,                     "testManualCollection"          },
+  { testCellAlloc,                            "testCellAlloc"                 },
+  { testConsCellAlloc,                        "testConsCellAlloc"             },
+  { testConsCellCar,                          "testConsCellCar"               },
+  { testConsCellCdr,                          "testConsCellCdr"               },
+  { testConsCellSetCar,                       "testConsCellSetCar"            },
+  { testConsCellSetCdr,                       "testConsCellSetCdr"            },
+  { testCyclicCollection,                     "testCyclicCollection"          },
+  { testDynamicHeapExpansion,                 "testDynamicHeapExpansion"      }
 };
 
 int main() {
@@ -80,101 +180,3 @@ int main() {
 
   return 0;  
 }
-
-//int main(int argc, char *argv[]) {
-//
-//  int HEAP_CELLS = 10;
-//  int TREE_SIZE = 5;
-//  int CYCLES = 0;
-//  int PRINT_TREE = 1;
-//  int PRINT_ADDRS = 0;
-//
-//  printf("\t\t*****COMMAND LINE ARGS*****\n\n");
-//  printf("HEAP_CELLS  [nat]: heap size in cons cells (default: 10)\n");
-//  printf("TREE_SIZE   [nat]: size of tree            (default: 5)\n");
-//  printf("CYCLES      [1/0]: include cycles          (default: 0)\n");
-//  printf("PRINT_TREES [1/0]: print generated trs     (default: 1)\n");
-//  printf("PRINT_ADDRS [1/0]: print tr addrs          (default: 0)\n\n");
-//
-//  if(argc == 6) {
-//    HEAP_CELLS = atoi(argv[1]);
-//    TREE_SIZE = atoi(argv[2]);
-//    CYCLES = atoi(argv[3]);
-//    PRINT_TREE = atoi(argv[4]);
-//    PRINT_ADDRS = atoi(argv[5]);
-//  }
-//
-//  if(HEAP_CELLS % 2) { HEAP_CELLS++; }
-//  if(HEAP_CELLS < 2) {
-//    printf("HEAP_CELLS must be > 1\n");
-//    return 0;
-//  } 
-//
-//  if(TREE_SIZE < 1) {
-//    printf("TREE_SIZE must be > 0\n");
-//    return 0;
-//  }
-//
-//  if(CYCLES != 0 && CYCLES != 1) {
-//    printf("CYCLES must be 0: NO or 1: YES\n");
-//    return 0;
-//  }
-//
-//  if(PRINT_TREE != 0 && PRINT_TREE != 1) {
-//    printf("PRINT_TREES must be 0: NO or 1: YES\n");
-//    return 0;
-//  }
-//
-//  if(PRINT_ADDRS != 0 && PRINT_ADDRS != 1) {
-//    printf("PRINT_ADDRS must be 0: NO or 1: YES\n");
-//    return 0;
-//  }
-//
-//  printf("\t\t***** TESTING CHENEY GC *****\n\n");
-//  printf("\t\t***** Initializing heap *****\n\n");
-//  printf("cell size:  %ld\n", sizeof(cell_t));
-//  printf("heap cells: %d\n", HEAP_CELLS);
-//  printf("MB eqv:     %lf\n\n", (sizeof(cell_t) * HEAP_CELLS) / 1000000.0);
-//  hinit(HEAP_CELLS);
-//
-//  printf("\t\t***** Constructing root tree *****\n\n");
-// 
-//  srand(time(NULL));
-//  build_tr(&root, TREE_SIZE, CYCLES);
-//
-//  if(PRINT_TREE) {
-//    printf("tree:\n");
-//    traverse_tr(root, TREE_SIZE);
-//  }
-//  
-//  if(PRINT_ADDRS) {
-//    printf("\ntree addrs:\n");
-//    traverse_tr_addrs(root, TREE_SIZE);
-//  }
-//
-//  if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr_intact(root, TREE_SIZE); }
-//
-//  printf("\n\t\t***** Start collecting *****\n\n");
-//  clock_t start, end;
-//  start = clock();
-//  collect();
-//  end = clock();
-//
-//  printf("Collection time: %fs\n\n", (double)(end - start) / CLOCKS_PER_SEC);
-//
-//  printf("\t\t***** Checking root tree *****\n\n");
-//
-//  if(PRINT_TREE) {
-//    printf("tree:\n");
-//    traverse_tr(root, TREE_SIZE);
-//  }
-//
-//  if(PRINT_ADDRS) {
-//    printf("\ntree addrs:\n");
-//    traverse_tr_addrs(root, TREE_SIZE);
-//  }
-//
-//  if(!PRINT_TREE && !PRINT_ADDRS) { traverse_tr_intact(root, TREE_SIZE); }
-//
-//  return 0;
-//}
