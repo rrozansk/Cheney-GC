@@ -2,7 +2,7 @@
  * FILE:    cheney.c                                                          *
  * AUTHOR:  Ryan Rozanski                                                     *
  * CREATED: 1/14/17                                                           *
- * EDITED:  11/11/17                                                          *
+ * EDITED:  11/14/17                                                          *
  * INFO:    Implementation of the interface located in cheney.h.              *
  *                                                                            *
  ******************************************************************************/
@@ -22,8 +22,8 @@
  ******************************************************************************/
 typedef struct heap {
   void *root;                               // ptr to all reachable objects
-  void *alloc;                              // current head of free memory
-  void *to, *from;                          // semi space differentiation
+  cell_t *alloc;                            // current head of free memory
+  cell_t *to, *from;                        // semi space differentiation
   unsigned long half;                       // semi space size (>= 32 bits)
   char dynamic;                             // flag for dynamic heap expansion
   unsigned long (*expander)(unsigned long); // optional custom expander
@@ -42,10 +42,9 @@ int rescale(heap_t *heap, unsigned long semi_cells) {
   // ensure left semi-space usage to properly update pointers
   if(heap->to < heap->from) { collect(heap); }
   unsigned long allocated_cells = heap->alloc - heap->from;
-  semi_cells -= semi_cells % 2;
   void *base = realloc(heap->from, semi_cells * 2 * sizeof(cell_t));
   if(!base) { return 0; }
-  heap->half = semi_cells / 2;
+  heap->half = semi_cells;
   heap->from = base;
   heap->to = heap->from + heap->half;
   heap->alloc = heap->from + allocated_cells;
@@ -58,9 +57,9 @@ cell_t *halloc(heap_t *heap) {
     collect(heap);
     if(heap->alloc == heap->from + heap->half) {
       if(!heap->dynamic) { return NULL; }
-        unsigned long semi_size = heap->expander(heap->half);
-        if(semi_size <= heap->half) { return NULL; }
-        if(!rescale(heap, semi_size)) { return NULL; }
+      unsigned long semi_size = heap->expander(heap->half);
+      if(semi_size <= heap->half) { return NULL; }
+      if(!rescale(heap, semi_size)) { return NULL; }
     }
   }
   return heap->alloc++;
@@ -90,7 +89,7 @@ void copy_ref(heap_t *heap, void **p) {
 heap_t *make_heap(unsigned long cells) {
   heap_t *heap = malloc(sizeof(heap_t));
   if(!heap) { return NULL; }
-  
+
   heap->from = calloc(cells -= (cells % 2), sizeof(cell_t));
   if(!heap->from) {
     free(heap);
@@ -154,19 +153,19 @@ unsigned long semi_size(heap_t *heap) { return heap->half; }
 
 unsigned long semi_used(heap_t *heap) { return heap->alloc - heap->from; }
 
-unsigned long semi_left(heap_t *heap) { 
+unsigned long semi_left(heap_t *heap) {
   return heap->half - (heap->alloc - heap->from);
 }
 
-cell_t *cell(heap_t *heap) { return halloc(heap); }
-
 cell_t *cons(heap_t *heap, void *car, void *cdr) {
   cell_t *cell = halloc(heap);
-  if(cell == NULL) { return NULL; }
+  if(!cell) { return NULL; }
   cell->car = car;
   cell->cdr = cdr;
   return cell;
 }
+
+cell_t *cell(heap_t *heap) { return cons(heap, NULL, NULL); }
 
 void *car(cell_t *cell) { return cell->car;  }
 

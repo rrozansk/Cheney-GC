@@ -2,7 +2,7 @@
  * FILE:    testCHENEY.c                                                      *
  * AUTHOR:  Ryan Rozanski                                                     *
  * CREATED: 10/31/17                                                          *
- * EDITED:  11/1/17                                                           *
+ * EDITED:  11/14/17                                                          *
  * INFO:    Test file for implementation of the interface located in cheney.h *
  *                                                                            *
  ******************************************************************************/
@@ -14,160 +14,588 @@
  ******************************************************************************/
 #include <cheney.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-/******************************************************************************
- *                                                                            *
- *   G L O B A L S                                                            *
- *                                                                            *
- ******************************************************************************/
-void *root; // define root for the garbage collector
-
-/******************************************************************************
- *                                                                            *
- *   C O N S T A N T S                                                        *
- *                                                                            *
- ******************************************************************************/
-#define TOTAL_TESTS 18
 
 /******************************************************************************
  *                                                                            *
  *   T Y P E S                                                                *
  *                                                                            *
  ******************************************************************************/
-typedef enum testResultCHENEY { CHENEY_PASS, CHENEY_FAIL } testResultCHENEY_t;
+typedef enum testResult { PASS, FAIL } testResult_t; /* Test function return */
+
+typedef testResult_t (*testFunction_t)();  /* Test function prototype */
+
+/******************************************************************************
+ *                                                                            *
+ *   H E L P E R S                                                            *
+ *                                                                            *
+ ******************************************************************************/
+unsigned long custom_expander(unsigned long size) { return size + 20; }
 
 /******************************************************************************
  *                                                                            *
  *   T E S T S                                                                *
  *                                                                            *
- ******************************************************************************/   
-testResultCHENEY_t testAtomicNullCheck() {
-  int *i = (int *)NULL;
-  return (isAtomic((void **)&i)) ? CHENEY_PASS : CHENEY_FAIL;
+ ******************************************************************************/
+testResult_t MakeHeapOddCells() {
+  return make_heap(9) ? PASS : FAIL;
 }
 
-testResultCHENEY_t testAtomicCheckSuccess() {
-  int *i = (int *)0b1;
-  return (isAtomic((void **)&i)) ? CHENEY_PASS : CHENEY_FAIL;
+testResult_t MakeHeapEvenCells() {
+  return make_heap(8) ? PASS : FAIL;
 }
 
-testResultCHENEY_t testAtomicCheckFailure() {
-  int *i = (int *)0b0; // 0b0 == NULL
-  return (isAtomic((void **)&i)) ? CHENEY_PASS : CHENEY_FAIL;
+testResult_t FreeHeapDefault() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  free_heap(&heap);
+
+  return !heap ? PASS : FAIL;
 }
 
-testResultCHENEY_t testPointerNullCheck() {
-  int *i = (int *)NULL;
-  return (isPtr((void **)&i)) ? CHENEY_FAIL : CHENEY_PASS;
+testResult_t GetDynamicDefault() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  int dynamic = get_dynamic(heap);
+  free_heap(&heap);
+
+  return !dynamic ? PASS : FAIL;
 }
 
-testResultCHENEY_t testPointerCheckSuccess() { // 0b0 == NULL
-  int *i = (int *)0b0;
-  return (isPtr((void **)&i)) ? CHENEY_FAIL : CHENEY_PASS;
+testResult_t SetDynamicOn() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  set_dynamic(heap, 1);
+  int dynamic = get_dynamic(heap);
+  free_heap(&heap);
+
+  return dynamic ? PASS : FAIL;
 }
 
-testResultCHENEY_t testPointerCheckFailure() {
-  int *i = (int *)0b1;
-  return (isPtr((void **)&i)) ? CHENEY_FAIL : CHENEY_PASS;
+testResult_t SetDynamicOnOff() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  set_dynamic(heap, 1);
+  int on_dynamic = get_dynamic(heap);
+  set_dynamic(heap, 0);
+  int on_again = get_dynamic(heap);
+  free_heap(&heap);
+
+  return on_dynamic && !on_again ? PASS : FAIL;
 }
 
-testResultCHENEY_t testInitCollectorEvenCells() {
-// void hinit(unsigned long cells) {
-  return CHENEY_FAIL;
+testResult_t GetDefaultExpander() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  unsigned long (*expander)(unsigned long) = get_expander(heap);
+  free_heap(&heap);
+
+  return !expander ? PASS : FAIL;
 }
 
-testResultCHENEY_t testInitCollectorOddCells() {
-// void hinit(unsigned long cells) {
-  return CHENEY_FAIL;
+testResult_t SetCustomExpander() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  set_expander(heap, custom_expander);
+
+  unsigned long (*expander)(unsigned long) = get_expander(heap);
+  free_heap(&heap);
+
+  return expander == custom_expander ? PASS : FAIL;
 }
 
-testResultCHENEY_t testAutomaticCollection() {
-// void collect() {
-  return CHENEY_FAIL;
+testResult_t GetDefaultRoot() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  void *root = get_root(heap);
+  free_heap(&heap);
+
+  return !root ? PASS : FAIL;
 }
 
-testResultCHENEY_t testManualCollection() {
-// void collect() {
-  return CHENEY_FAIL;
+testResult_t SetCustomRoot() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  void *s_root = &heap;
+  set_root(heap, s_root);
+  void *g_root = get_root(heap);
+  free_heap(&heap);
+
+  return s_root == g_root ? PASS : FAIL;
 }
 
-testResultCHENEY_t testCellAlloc() {
-// cell_t *halloc() {
-  return CHENEY_FAIL;
+testResult_t EmptyCollections() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  int why_not;
+  for(why_not = 10; why_not; why_not--) { collect(heap); }
+  free_heap(&heap);
+
+  return PASS;
 }
 
-testResultCHENEY_t testConsCellAlloc() {
-// cell_t *cons(void *car, void *cdr) {
-  return CHENEY_FAIL;
+testResult_t HeapSizeDefault() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  unsigned long size = heap_size(heap);
+  free_heap(&heap);
+
+  return size == 8 ? PASS : FAIL;
 }
 
-testResultCHENEY_t testConsCellCar() {
-// void *car(cell_t *cell) { return cell->car;  }
-  return CHENEY_FAIL;
+testResult_t HeapSemiSizeDefault() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  unsigned long size = semi_size(heap);
+  free_heap(&heap);
+
+  return size == 4 ? PASS : FAIL;
 }
 
-testResultCHENEY_t testConsCellCdr() {
-// void *cdr(cell_t *cell) { return cell->cdr; }
-  return CHENEY_FAIL;
+testResult_t HeapSemiUsedDefault() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  unsigned long size = semi_used(heap);
+  free_heap(&heap);
+
+  return size == 0 ? PASS : FAIL;
 }
 
-testResultCHENEY_t testConsCellSetCar() {
-// void set_car(cell_t *cell, void *v) { cell->car = v;  }
-  return CHENEY_FAIL;
+testResult_t HeapSemiLeftDefault() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  unsigned long size = semi_left(heap);
+  free_heap(&heap);
+
+  return size == 4 ? PASS : FAIL;
 }
 
-testResultCHENEY_t testConsCellSetCdr() {
-// void set_cdr(cell_t *cell, void *v) { cell->cdr = v;  }
-  return CHENEY_FAIL;
+testResult_t HeapResizeSmallerDefault() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  int successful = resize(heap, 4);
+  free_heap(&heap);
+
+  return successful ? PASS : FAIL;
 }
 
-testResultCHENEY_t testCyclicCollection() {
-  return CHENEY_FAIL;
+testResult_t HeapResizeLallerDefault() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  int successful = resize(heap, 16);
+  free_heap(&heap);
+
+  return successful ? PASS : FAIL;
 }
 
-testResultCHENEY_t testDynamicHeapExpansion() {
-  return CHENEY_FAIL;
+testResult_t EmptyCellAllocation() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  cell_t *_cell = cell(heap);
+  free_heap(&heap);
+
+  return _cell ? PASS : FAIL;
+}
+
+testResult_t InitializedCellAllocation() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  cell_t *_cell = cons(heap, heap, heap);
+  free_heap(&heap);
+
+  return _cell ? PASS : FAIL;
+}
+
+testResult_t CellFirstFieldGetter() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  int foo, bar;
+  cell_t *_cell = cons(heap, &foo, &bar);
+  void *val = car(_cell);
+  free_heap(&heap);
+
+  return val == &foo ? PASS : FAIL;
+}
+
+testResult_t CellSecondFieldGetter() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  int foo, bar;
+  cell_t *_cell = cons(heap, &foo, &bar);
+  void *val = cdr(_cell);
+  free_heap(&heap);
+
+  return val == &bar ? PASS : FAIL;
+}
+
+testResult_t CellFirstFieldSetter() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  cell_t *_cell = cons(heap, heap, heap);
+  set_car(_cell, NULL);
+  void *val = car(_cell);
+  free_heap(&heap);
+
+  return !val ? PASS : FAIL;
+}
+
+testResult_t CellSecondFieldSetter() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  cell_t *_cell = cons(heap, heap, heap);
+  set_cdr(_cell, NULL);
+  void *val = cdr(_cell);
+  free_heap(&heap);
+
+  return !val ? PASS : FAIL;
+}
+
+testResult_t AtomicDataPass() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  void *value = (void *)0b1;
+
+  return is_atom(&value) ? PASS : FAIL;
+}
+
+testResult_t AtomicDataFail() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  return !is_atom((void **)&heap) ? PASS : FAIL;
+}
+
+testResult_t AtomicDataNull() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  void *value = NULL;
+
+  return is_atom(&value) ? PASS : FAIL;
+}
+
+testResult_t CellDataPass() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  cell_t *value = cell(heap);
+
+  return is_cell((void **)&value) ? PASS : FAIL;
+}
+
+testResult_t CellDataFail() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  void *value = (void *)0b1;
+
+  return !is_cell(&value) ? PASS : FAIL;
+}
+
+testResult_t CellDataNull() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  cell_t *value = NULL;
+
+  return !is_cell((void **)&value) ? PASS : FAIL;
+}
+
+testResult_t CorrectAmountCollected() {
+  heap_t *heap = make_heap(10);
+  if(!heap) { return FAIL; }
+
+  int cells;
+  for(cells = 5; cells; cells--) {
+    if(!cell(heap)) {
+      free_heap(&heap);
+      return FAIL;
+    }
+  }
+
+  if(!(semi_used(heap) == 5 &&
+       semi_left(heap) == 0 &&
+       cell(heap))) { // cause collection of 5 and alloc of 1
+      free_heap(&heap);
+      return FAIL;
+  }
+
+  return (semi_used(heap) == 1 && semi_left(heap) == 4) ? PASS : FAIL;
+}
+
+testResult_t StaticHeapAllocationFailure() { 
+  heap_t *heap = make_heap(8); // non-dynamic by default
+  if(!heap) { return FAIL; }
+
+  void *root = cell(heap);
+  set_root(heap, root);
+  set_car(root, cell(heap));
+  set_cdr(root, cell(heap));
+  set_cdr(cdr(root), cell(heap));
+
+  cell_t *_cell = cell(heap);
+  free_heap(&heap);
+ 
+  return (!_cell) ? PASS : FAIL;
+}
+
+testResult_t DynamicHeapDefaultExpand() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  set_dynamic(heap, 1); // default expander
+
+  void *root = cell(heap);
+  set_root(heap, root);
+  set_car(root, cell(heap));
+  set_cdr(root, cell(heap));
+  set_cdr(cdr(root), cell(heap));
+  set_cdr(car(root), cell(heap)); // collection with expansion
+  
+  unsigned long size = heap_size(heap);
+  unsigned long used = semi_used(heap);
+  unsigned long left = semi_left(heap);
+  free_heap(&heap);
+
+  return (size == 16 && used == 5 && left == 3) ? PASS : FAIL;
+}
+
+testResult_t DynamicHeapCustomExpand() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  set_dynamic(heap, 1);
+  set_expander(heap, custom_expander);
+
+  void *root = cell(heap);
+  set_root(heap, root);
+  set_car(root, cell(heap));
+  set_cdr(root, cell(heap));
+  set_cdr(cdr(root), cell(heap));
+  set_cdr(car(root), cell(heap)); // collection with expansion
+  
+  // custom expander for semi_size -> semi_size+20=24 *2=48
+  unsigned long size = heap_size(heap);
+  unsigned long used = semi_used(heap);
+  unsigned long left = semi_left(heap);
+  free_heap(&heap);
+
+  return (size == 48 && used == 5 && left == 19) ? PASS : FAIL;
+}
+
+testResult_t SafeRootedObjects() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  void *root = cell(heap); // make tiny 3 node tree
+  set_root(heap, root);
+  set_car(root, cell(heap));
+  set_cdr(root, cell(heap));
+  collect(heap);
+  
+  if(semi_used(heap) != 3 || semi_left(heap) != 1) { return FAIL; }
+
+  root = get_root(heap); // check if tree still intact
+  if(!is_cell(&root)) { return FAIL; }
+
+  void *tmp = car(root);
+  if(!is_cell(&tmp)) { return FAIL; }
+  tmp = cdr(root);
+  if(!is_cell(&tmp)) { return FAIL; }
+
+  tmp = car(cdr(root));
+  if(!is_atom(&tmp)) { return FAIL; }
+  tmp = cdr(cdr(root));
+  if(!is_atom(&tmp)) { return FAIL; }
+  tmp = car(car(root));
+  if(!is_atom(&tmp)) { return FAIL; }
+  tmp = cdr(car(root));
+  if(!is_atom(&tmp)) { return FAIL; }
+
+  free_heap(&heap);
+  return PASS;
+}
+
+testResult_t ResizeSmallerAfterCollection() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  void *root = cell(heap);
+  set_root(heap, root);
+  set_car(root, cell(heap));
+  set_cdr(root, cell(heap));
+
+  collect(heap);
+  resize(heap, 6); // exact resize
+  collect(heap);
+  unsigned long size = heap_size(heap);
+  unsigned long used = semi_used(heap);
+  unsigned long left = semi_left(heap);
+  free_heap(&heap);
+
+  return (size == 6 && used == 3 && left == 0) ? PASS : FAIL;
+}
+
+testResult_t ResizeLallerAfterCollection() {
+  heap_t *heap = make_heap(6);
+  if(!heap) { return FAIL; }
+
+  void *root = cell(heap);
+  set_root(heap, root);
+  set_car(root, cell(heap));
+  set_cdr(root, cell(heap));
+
+  collect(heap);
+  resize(heap, 12); // exact resize
+  collect(heap);
+  unsigned long size = heap_size(heap);
+  unsigned long used = semi_used(heap);
+  unsigned long left = semi_left(heap);
+  free_heap(&heap);
+
+  return (size == 12 && used == 3 && left == 3) ? PASS : FAIL;
+}
+
+testResult_t DynamicResizeFromRightSemi() {
+  heap_t *heap = make_heap(8);
+  if(!heap) { return FAIL; }
+
+  set_dynamic(heap, 1); // default expander
+
+  collect(heap); // cause allocation from right semi space
+
+  //void *root = cell(heap); NOTE: invalid ref after a collection
+  // ALWAYS use set/get_root to manage root, instead:
+  set_root(heap, cell(heap));
+  if(!get_root(heap)) { return FAIL; }
+  set_car(get_root(heap), cell(heap));
+  set_cdr(get_root(heap), cell(heap));
+  set_cdr(cdr(get_root(heap)), cell(heap));
+  set_cdr(car(get_root(heap)), cell(heap)); // collection with expansion
+  
+  unsigned long size = heap_size(heap);
+  unsigned long used = semi_used(heap);
+  unsigned long left = semi_left(heap);
+  free_heap(&heap);
+
+  return (size == 16 && used == 5 && left == 3) ? PASS : FAIL;
+}
+
+testResult_t DynamicHeapOnOff() {
+  heap_t *heap = make_heap(2);
+  if(!heap) { return FAIL; }
+
+  set_dynamic(heap, 1);
+  set_root(heap, cell(heap));
+
+  cell_t *_cell = cell(heap); // collect and expand heap to 4 cells
+  if(heap_size(heap) != 4) { return FAIL; }
+
+  set_dynamic(heap, 0);
+
+  set_car(get_root(heap), _cell);
+
+  // allocation failure since heap cannot expand anymore
+  if((_cell = cell(heap))) { return FAIL; }
+
+  free_heap(&heap);
+
+  return PASS;
 }
 
 /******************************************************************************
  *                                                                            *
- *   M A I N                                                                  *
+ *   T E S T    T A B L E                                                     *
  *                                                                            *
  ******************************************************************************/
+#define FUNCTION    0  // function ptr @idx 0
+#define NAME        1  // test name @idx 1
+#define TOTAL_TESTS 38 // # tests in array
+
 void *TESTS[TOTAL_TESTS][2] = {
-  { testAtomicNullCheck,                      "testAtomicNullCheck"           },
-  { testAtomicCheckSuccess,                   "testAtomicCheckSuccess"        },
-  { testAtomicCheckFailure,                   "testAtomicCheckFailure"        },
-  { testPointerNullCheck,                     "testPointerNullCheck"          },
-  { testPointerCheckSuccess,                  "testPointerCheckSuccess"       },
-  { testPointerCheckFailure,                  "testPointerCheckFailure"       },
-  { testInitCollectorEvenCells,               "testInitCollectorEvenCells"    },
-  { testInitCollectorOddCells,                "testInitCollectorOddCells"     },
-  { testAutomaticCollection,                  "testAutomaticCollection"       },
-  { testManualCollection,                     "testManualCollection"          },
-  { testCellAlloc,                            "testCellAlloc"                 },
-  { testConsCellAlloc,                        "testConsCellAlloc"             },
-  { testConsCellCar,                          "testConsCellCar"               },
-  { testConsCellCdr,                          "testConsCellCdr"               },
-  { testConsCellSetCar,                       "testConsCellSetCar"            },
-  { testConsCellSetCdr,                       "testConsCellSetCdr"            },
-  { testCyclicCollection,                     "testCyclicCollection"          },
-  { testDynamicHeapExpansion,                 "testDynamicHeapExpansion"      }
+  { MakeHeapOddCells,                     "MakeHeapOddCells"                  },
+  { MakeHeapEvenCells,                    "MakeHeapEvenCell"                  },
+  { FreeHeapDefault,                      "FreeHeapDefault"                   },
+  { GetDynamicDefault,                    "GetDynamicDefault"                 },
+  { SetDynamicOn,                         "SetDynamicOn"                      },
+  { SetDynamicOnOff,                      "SetDynamicOnOff"                   },
+  { GetDefaultExpander,                   "GetDefaultExpand"                  },
+  { SetCustomExpander,                    "SetCustomExpande"                  },
+  { GetDefaultRoot,                       "GetDefaultRoot"                    },
+  { SetCustomRoot,                        "SetCustomRoot"                     },
+  { EmptyCollections,                     "EmptyCollections"                  },
+  { HeapSizeDefault,                      "HeapSizeDefault"                   },
+  { HeapSemiSizeDefault,                  "HeapSemiSizeDefault"               },
+  { HeapSemiUsedDefault,                  "HeapSemiUsedDefault"               },
+  { HeapSemiLeftDefault,                  "HeapSemiLeftDefault"               },
+  { HeapResizeSmallerDefault,             "HeapResizeSmallerDefault"          },
+  { HeapResizeLallerDefault,              "HeapResizeLallerDefault"           },
+  { EmptyCellAllocation,                  "EmptyCellAllocation"               },
+  { InitializedCellAllocation,            "InitializedCellAllocation"         },
+  { CellFirstFieldGetter,                 "CellFirstFieldGetter"              },
+  { CellSecondFieldGetter,                "CellSecondFieldGetter"             },
+  { CellFirstFieldSetter,                 "CellFirstFieldSetter"              },
+  { CellSecondFieldSetter,                "CellSecondFieldSetter"             },
+  { AtomicDataPass,                       "AtomicDataPass"                    },
+  { AtomicDataFail,                       "AtomicDataFail"                    },
+  { AtomicDataNull,                       "AtomicDataNull"                    },
+  { CellDataPass,                         "CellDataPass"                      },
+  { CellDataFail,                         "CellDataFail"                      },
+  { CellDataNull,                         "CellDataNull"                      },
+  { CorrectAmountCollected,               "CorrectAmountCollected"            },
+  { StaticHeapAllocationFailure,          "StaticHeapAllocationFailure"       },
+  { DynamicHeapDefaultExpand,             "DynamicHeapDefaultExpand"          },
+  { DynamicHeapCustomExpand,              "DynamicHeapCustomExpand"           },
+  { SafeRootedObjects,                    "SafeRootedObjects"                 },
+  { ResizeSmallerAfterCollection,         "ResizeSmallerAfterCollection"      },
+  { ResizeLallerAfterCollection,          "ResizeLallerAfterCollection"       },
+  { DynamicResizeFromRightSemi,           "DynamicResizeFromRightSemi"        },
+  { DynamicHeapOnOff,                     "DynamicHeapOnOff"                  },
 };
 
+/******************************************************************************
+ *                                                                            *
+ *   T E S T    D R I V E R                                                   *
+ *                                                                            *
+ ******************************************************************************/
 int main() {
 
-  testResultCHENEY_t result;
-  int test, passes, fails;
-  for(test = passes = fails = 0; test < TOTAL_TESTS; test++) {
-    result = ((testResultCHENEY_t (*)(void))(TESTS[test][0]))();
-    if(result == CHENEY_PASS) {
+  testResult_t result;
+  testFunction_t test;
+
+  int passes = 0;
+  int fails = 0;
+
+  int idx;
+  for(idx = 0; idx < TOTAL_TESTS; idx++) {
+    test = TESTS[idx][FUNCTION];
+    result = test();
+    if(result == PASS) {
       passes++;
-      fprintf(stdout, "PASS: %s\n", (char *)TESTS[test][1]);
+      fprintf(stdout, "PASS: %s\n", (char *)TESTS[idx][NAME]);
     } else {
-      fprintf(stdout, "FAIL: %s\n", (char *)TESTS[test][1]);
+      fprintf(stdout, "FAIL: %s\n", (char *)TESTS[idx][NAME]);
       fails++;
     }
     fflush(stdout); // so if segfault/crash we know last successful test

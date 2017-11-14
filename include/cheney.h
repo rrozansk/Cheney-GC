@@ -261,20 +261,6 @@ unsigned long semi_left(heap_t *heap);
 
 /******************************************************************************
  *                                                                            *
- * PURPOSE: Allocate a new cons cell with both fields uninitialized.          *
- *                                                                            *
- * ARGUMENT DESCRIPTION                                                       *
- * -------- -----------                                                       *
- * heap     The heap in which to attempt an allocation from.                  *
- *                                                                            *
- * RETURNS: Newly allocated cons cell with uninitialized fields or NULL if    *
- *          allocation fails.                                                 *
- *                                                                            *
- ******************************************************************************/
-cell_t *cell(heap_t *heap);
-
-/******************************************************************************
- *                                                                            *
  * PURPOSE: Allocate a new cons cell with both fields initialized with the    *
  *          given contents.                                                   *
  *                                                                            *
@@ -289,6 +275,19 @@ cell_t *cell(heap_t *heap);
  *                                                                            *
  ******************************************************************************/
 cell_t *cons(heap_t *heap, void *car, void *cdr);
+
+/******************************************************************************
+ *                                                                            *
+ * PURPOSE: Allocate a new cons cell with both fields initialized to NULL.    *
+ *                                                                            *
+ * ARGUMENT DESCRIPTION                                                       *
+ * -------- -----------                                                       *
+ * heap     The heap in which to attempt an allocation from.                  *
+ *                                                                            *
+ * RETURNS: Newly allocated cons cell or NULL if allocation fails.            *
+ *                                                                            *
+ ******************************************************************************/
+cell_t *cell(heap_t *heap);
 
 /******************************************************************************
  *                                                                            *
