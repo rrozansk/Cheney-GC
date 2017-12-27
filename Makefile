@@ -10,46 +10,36 @@ LFLAGS = -L/lib/
 LIBS = -lm
 # all the files to include in the generated .tar
 TAR_FILES = include/*.h src/*.c test/*.c LICENSE.txt Makefile README.md
-# garbage collection main executable
-MAIN_DEPS = include/cheney.h src/cheney.c src/main.c
-# auto-generate the object files
-MAIN_OBJS = $(MAIN_DEPS:.c=.o)
-# define the executable file
-MAIN = cheney
-# garbage collection test executable
+# name of generated tar
+TAR_NAME = cheney
+# garbage collection table driven tests executable
 TEST_DEPS = include/cheney.h src/cheney.c test/testCHENEY.c
 # auto-generate the object files
 TEST_OBJS = $(TEST_DEPS:.c=.o)
 # define the executable file
-TEST = ctest
+TEST = tests
 
 # targets not dependent on files so make doesnt get confused
 .PHONY:  default build rebuild all install clean tar
 
-default: $(MAIN)
+default: $(TEST)
 
-build:   $(MAIN)
+build:   $(TEST)
 
 rebuild: clean build
 
-all:     $(MAIN)
-
-$(MAIN): $(MAIN_OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(MAIN_OBJS) $(LFLAGS) $(LIBS)
+all:     $(TEST)
 
 .c.o:
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
-install:  rebuild
-	\cp $(MAIN) /usr/bin/
-
 clean:
-	\rm -f *.o *~ src/*.o src/*~ test/*.o test/*~ $(MAIN)
+	\rm -f *.o *~ src/*.o src/*~ include/*.o include/*~ test/*.o test/*~ $(TEST)
 
 tar:
-	\tar -cvf $(MAIN).tar $(TAR_FILES)
+	\tar -cvf $(TAR_NAME).tar $(TAR_FILES)
 
 $(TEST): $(TEST_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(TEST) $(TEST_OBJS) $(LFLAGS) $(LIBS)
 	./$(TEST)
-	\rm -f *.o *~ src/*.o src/*~ test/*.o test/*~ $(TEST)
+	\rm -f *.o *~ src/*.o src/*~ include/*.o include/*~ test/*.o test/*~ $(TEST)
