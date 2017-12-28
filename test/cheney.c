@@ -1,9 +1,18 @@
 /******************************************************************************
- * FILE:    testCHENEY.c                                                      *
+ * FILE:    cheney.c                                                          *
  * AUTHOR:  Ryan Rozanski                                                     *
  * CREATED: 10/31/17                                                          *
- * EDITED:  11/14/17                                                          *
- * INFO:    Test file for implementation of the interface located in cheney.h *
+ * EDITED:  12/28/17                                                          *
+ * INFO:    Table driven testing for the interface located at cheney.h.       *
+ *          Extending the test suite is possible if so desired and can be     *
+ *          done with minimal effort. First, it requires defining a new test. *
+ *          A test is just a function which takes no arguments and returns a  *
+ *          'testResult_t' type as defined below. Second, an entry must be    *
+ *          added to the table. A table entry is an array literal containing  *
+ *          two items. Index zero contains the name of test function just     *
+ *          written. Index one contains a short string description to print   *
+ *          when ran which identifies the specific test. Third, and finally,  *
+ *          the integer value of 'TOTAL_TESTS' must be incremeted by one.     *
  *                                                                            *
  ******************************************************************************/
 
@@ -36,15 +45,16 @@ unsigned long custom_expander(unsigned long size) { return size + 20; }
  *   T E S T S                                                                *
  *                                                                            *
  ******************************************************************************/
-testResult_t MakeHeapOddCells() {
-  return make_heap(9) ? PASS : FAIL;
+testResult_t MakeFreeHeapOddCells() {
+  heap_t *heap = make_heap(9);
+  if(!heap) { return FAIL; }
+
+  free_heap(&heap);
+
+  return !heap ? PASS : FAIL;
 }
 
-testResult_t MakeHeapEvenCells() {
-  return make_heap(8) ? PASS : FAIL;
-}
-
-testResult_t FreeHeapDefault() {
+testResult_t MakeFreeHeapEvenCells() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -63,7 +73,7 @@ testResult_t GetDynamicDefault() {
   return !dynamic ? PASS : FAIL;
 }
 
-testResult_t SetDynamicOn() {
+testResult_t SetGetDynamicOn() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -74,7 +84,7 @@ testResult_t SetDynamicOn() {
   return dynamic ? PASS : FAIL;
 }
 
-testResult_t SetDynamicOnOff() {
+testResult_t SetGetDynamicOnOff() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -97,7 +107,7 @@ testResult_t GetDefaultExpander() {
   return !expander ? PASS : FAIL;
 }
 
-testResult_t SetCustomExpander() {
+testResult_t SetGetCustomExpander() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -119,7 +129,7 @@ testResult_t GetDefaultRoot() {
   return !root ? PASS : FAIL;
 }
 
-testResult_t SetCustomRoot() {
+testResult_t SetGetCustomRoot() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -142,7 +152,7 @@ testResult_t EmptyCollections() {
   return PASS;
 }
 
-testResult_t HeapSizeDefault() {
+testResult_t HeapSize() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -152,7 +162,7 @@ testResult_t HeapSizeDefault() {
   return size == 8 ? PASS : FAIL;
 }
 
-testResult_t HeapSemiSizeDefault() {
+testResult_t HeapSemiSize() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -162,7 +172,7 @@ testResult_t HeapSemiSizeDefault() {
   return size == 4 ? PASS : FAIL;
 }
 
-testResult_t HeapSemiUsedDefault() {
+testResult_t HeapSemiUsed() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -172,7 +182,7 @@ testResult_t HeapSemiUsedDefault() {
   return size == 0 ? PASS : FAIL;
 }
 
-testResult_t HeapSemiLeftDefault() {
+testResult_t HeapSemiLeft() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
@@ -182,24 +192,26 @@ testResult_t HeapSemiLeftDefault() {
   return size == 4 ? PASS : FAIL;
 }
 
-testResult_t HeapResizeSmallerDefault() {
+testResult_t HeapResizeSmaller() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
   int successful = resize(heap, 4);
+  int size = heap_size(heap);
   free_heap(&heap);
 
-  return successful ? PASS : FAIL;
+  return successful && size == 4 ? PASS : FAIL;
 }
 
-testResult_t HeapResizeLallerDefault() {
+testResult_t HeapResizeLarger() {
   heap_t *heap = make_heap(8);
   if(!heap) { return FAIL; }
 
   int successful = resize(heap, 16);
+  int size = heap_size(heap);
   free_heap(&heap);
 
-  return successful ? PASS : FAIL;
+  return successful && size == 16 ? PASS : FAIL;
 }
 
 testResult_t EmptyCellAllocation() {
@@ -344,7 +356,7 @@ testResult_t CorrectAmountCollected() {
   return (semi_used(heap) == 1 && semi_left(heap) == 4) ? PASS : FAIL;
 }
 
-testResult_t StaticHeapAllocationFailure() { 
+testResult_t StaticHeapCellAllocationFailure() { 
   heap_t *heap = make_heap(8); // non-dynamic by default
   if(!heap) { return FAIL; }
 
@@ -531,26 +543,25 @@ testResult_t DynamicHeapOnOff() {
  ******************************************************************************/
 #define FUNCTION    0  // function ptr @idx 0
 #define NAME        1  // test name @idx 1
-#define TOTAL_TESTS 38 // # tests in array
+#define TOTAL_TESTS 37 // # tests in array/table
 
 void *TESTS[TOTAL_TESTS][2] = {
-  { MakeHeapOddCells,                     "MakeHeapOddCells"                  },
-  { MakeHeapEvenCells,                    "MakeHeapEvenCell"                  },
-  { FreeHeapDefault,                      "FreeHeapDefault"                   },
+  { MakeFreeHeapOddCells,                 "MakeFreeHeapOddCells"              },
+  { MakeFreeHeapEvenCells,                "MakeFreeHeapEvenCells"             },
   { GetDynamicDefault,                    "GetDynamicDefault"                 },
-  { SetDynamicOn,                         "SetDynamicOn"                      },
-  { SetDynamicOnOff,                      "SetDynamicOnOff"                   },
-  { GetDefaultExpander,                   "GetDefaultExpand"                  },
-  { SetCustomExpander,                    "SetCustomExpande"                  },
+  { SetGetDynamicOn,                      "SetGetDynamicOn"                   },
+  { SetGetDynamicOnOff,                   "SetGetDynamicOnOff"                },
+  { GetDefaultExpander,                   "GetDefaultExpander"                },
+  { SetGetCustomExpander,                 "SetGetCustomExpander"              },
   { GetDefaultRoot,                       "GetDefaultRoot"                    },
-  { SetCustomRoot,                        "SetCustomRoot"                     },
+  { SetGetCustomRoot,                     "SetGetCustomRoot"                  },
   { EmptyCollections,                     "EmptyCollections"                  },
-  { HeapSizeDefault,                      "HeapSizeDefault"                   },
-  { HeapSemiSizeDefault,                  "HeapSemiSizeDefault"               },
-  { HeapSemiUsedDefault,                  "HeapSemiUsedDefault"               },
-  { HeapSemiLeftDefault,                  "HeapSemiLeftDefault"               },
-  { HeapResizeSmallerDefault,             "HeapResizeSmallerDefault"          },
-  { HeapResizeLallerDefault,              "HeapResizeLallerDefault"           },
+  { HeapSize,                             "HeapSize"                          },
+  { HeapSemiSize,                         "HeapSemiSize"                      },
+  { HeapSemiUsed,                         "HeapSemiUsed"                      },
+  { HeapSemiLeft,                         "HeapSemiLeft"                      },
+  { HeapResizeSmaller,                    "HeapResizeSmaller"                 },
+  { HeapResizeLarger,                     "HeapResizeLarger"                  },
   { EmptyCellAllocation,                  "EmptyCellAllocation"               },
   { InitializedCellAllocation,            "InitializedCellAllocation"         },
   { CellFirstFieldGetter,                 "CellFirstFieldGetter"              },
@@ -564,7 +575,7 @@ void *TESTS[TOTAL_TESTS][2] = {
   { CellDataFail,                         "CellDataFail"                      },
   { CellDataNull,                         "CellDataNull"                      },
   { CorrectAmountCollected,               "CorrectAmountCollected"            },
-  { StaticHeapAllocationFailure,          "StaticHeapAllocationFailure"       },
+  { StaticHeapCellAllocationFailure,      "StaticHeapCellAllocationFailure"   },
   { DynamicHeapDefaultExpand,             "DynamicHeapDefaultExpand"          },
   { DynamicHeapCustomExpand,              "DynamicHeapCustomExpand"           },
   { SafeRootedObjects,                    "SafeRootedObjects"                 },
